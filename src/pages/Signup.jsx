@@ -1,71 +1,64 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-const Signup = () => {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
-  const navigate = useNavigate();
+function Signup() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
+
+  const [message, setMessage] = useState('');
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-
-    // Later send to FastAPI
-    console.log('Registering:', form);
-
-    // Simulate success
-    navigate('/dashboard');
+    try {
+      const res = await axios.post('http://localhost:8000/auth/signup', formData);
+      setMessage('Signup successful! 🎉');
+    } catch (err) {
+      setMessage(err.response?.data?.detail || 'Signup failed');
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-blue-50 px-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-semibold text-blue-800 mb-6 text-center">Sign Up</h2>
-
-        <form onSubmit={handleSignup} className="space-y-4">
-          <input
-            type="text"
-            name="name"
-            placeholder="Full Name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <input
-            type="password"
-            name="password"
-            placeholder="Password"
-            value={form.password}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Sign Up
-          </button>
-        </form>
-
-        <p className="text-sm text-center text-gray-600 mt-4">
-          Already have an account? <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
-        </p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <form onSubmit={handleSignup} className="bg-white p-8 rounded shadow-md w-80">
+        <h2 className="text-xl font-bold mb-4">Sign Up</h2>
+        <input
+          type="text"
+          name="name"
+          placeholder="Full Name"
+          onChange={handleChange}
+          className="w-full mb-3 p-2 border rounded"
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          onChange={handleChange}
+          className="w-full mb-3 p-2 border rounded"
+          required
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          onChange={handleChange}
+          className="w-full mb-4 p-2 border rounded"
+          required
+        />
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+          Register
+        </button>
+        {message && <p className="mt-3 text-center text-sm text-gray-700">{message}</p>}
+      </form>
     </div>
   );
-};
+}
 
 export default Signup;

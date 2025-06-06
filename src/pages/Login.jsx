@@ -1,57 +1,51 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
+function Login() {
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [message, setMessage] = useState('');
 
-  const handleLogin = (e) => {
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-
-    // Later connect with FastAPI
-    console.log('Logging in with:', email, password);
-
-    // Simulate success
-    navigate('/dashboard');
+    try {
+      const res = await axios.post('http://localhost:8000/auth/login', formData);
+      setMessage('Login successful! ✅');
+    } catch (err) {
+      setMessage(err.response?.data?.detail || 'Login failed');
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-blue-50 px-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-md">
-        <h2 className="text-2xl font-semibold text-blue-800 mb-6 text-center">Login</h2>
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-            required
-          />
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Login
-          </button>
-        </form>
-
-        <p className="text-sm text-center text-gray-600 mt-4">
-          Don't have an account? <Link to="/signup" className="text-blue-600 hover:underline">Sign up</Link>
-        </p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <form onSubmit={handleLogin} className="bg-white p-8 rounded shadow-md w-80">
+        <h2 className="text-xl font-bold mb-4">Login</h2>
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          onChange={handleChange}
+          className="w-full mb-3 p-2 border rounded"
+          required
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          onChange={handleChange}
+          className="w-full mb-4 p-2 border rounded"
+          required
+        />
+        <button type="submit" className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">
+          Login
+        </button>
+        {message && <p className="mt-3 text-center text-sm text-gray-700">{message}</p>}
+      </form>
     </div>
   );
-};
+}
 
 export default Login;
