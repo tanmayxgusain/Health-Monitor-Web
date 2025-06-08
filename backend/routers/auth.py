@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from database import SessionLocal
+from database import SessionLocal, get_db
 import models, schemas
+import bcrypt
+from schemas import UserCreate, UserLogin
+from models import User
+
+
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -13,21 +18,33 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/signup", response_model=schemas.UserResponse)
-def signup(user: schemas.UserSignup, db: Session = Depends(get_db)):
-    existing_user = db.query(models.User).filter(models.User.email == user.email).first()
+@router.post("/signup")
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="Email already exists")
+        raise HTTPException(status_code=400, detail="Email already registered")
     
-    new_user = models.User(name=user.name, email=user.email, password=user.password)
+    hashed_password = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
+
+    new_user = User(
+        name=user.name,
+        email=user.email,
+        password=hashed_password.decode('utf-8')
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return new_user
+    return {"message": "User created successfully"}
+
 
 @router.post("/login")
-def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if not db_user or db_user.password != user.password:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.email == user.email).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+
+    if not bcrypt.checkpw(user.password.encode('utf-8'), db_user.password.encode('utf-8')):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+
     return {"message": "Login successful"}
+

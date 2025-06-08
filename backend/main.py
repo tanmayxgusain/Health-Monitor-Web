@@ -3,6 +3,8 @@ from routers import auth, healthdata
 from database import Base, engine
 import models
 from fastapi.middleware.cors import CORSMiddleware
+from routers import healthdata
+
 
 
 app = FastAPI()
