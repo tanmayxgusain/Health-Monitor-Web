@@ -5,6 +5,8 @@ import models
 from fastapi.middleware.cors import CORSMiddleware
 from routers import healthdata
 
+from routers import google_auth 
+
 
 
 app = FastAPI()
@@ -21,6 +23,8 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(healthdata.router)
+
+app.include_router(google_auth.router)
 
 @app.get("/")
 def root():

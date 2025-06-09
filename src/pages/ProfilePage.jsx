@@ -1,4 +1,5 @@
 import React from "react";
+import MainLayout from "../layouts/MainLayout";
 import ConnectedDeviceCard from "../components/ConnectedDeviceCard";
 
 const ProfilePage = () => {
@@ -24,10 +25,10 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">My Profile</h1>
+    <div>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">My Profile</h1>
 
-      <div className="bg-white rounded-2xl p-6 shadow-md flex items-center space-x-6">
+      <div className="bg-white rounded-2xl p-6 shadow-md flex items-center space-x-6 mb-6">
         <img
           src={user.avatar}
           alt="avatar"
