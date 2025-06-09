@@ -71,4 +71,3 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/t
 
 
 on 9/7/25 updated readme.md file for mimi
-ko
