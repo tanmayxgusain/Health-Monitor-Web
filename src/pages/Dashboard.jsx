@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-
+import { useNavigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
 import LineChartPanel from "../components/LineChartPanel";
 import { generateChartData } from "../utils/fakeData";
@@ -14,6 +14,7 @@ import HealthChart from "../components/HealthChart";
 import { FaHeartbeat, FaTint, FaLungs } from "react-icons/fa";
 
 import api from "../api/axios";
+import axios from "axios";
 
 const heartRateData = [
   { time: "10 AM", value: 76 },
@@ -39,6 +40,7 @@ const spo2Data = [
   { time: "2 PM", value: 97 },
 ];
 
+
 const Dashboard = () => {
   const heartRateData = generateChartData("HR");
   const spo2Data = generateChartData("SpO2");
@@ -50,6 +52,13 @@ const Dashboard = () => {
     blood_pressure: [],
     spo2: [],
   });
+
+  const [healthData, setHealthData] = useState(null);
+  const navigate = useNavigate();
+  useEffect(() => {
+    const email = localStorage.getItem("user_email");
+    if (!email) navigate("/login");
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -66,6 +75,26 @@ const Dashboard = () => {
     };
 
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchGoogleHealthData = async () => {
+      const email = localStorage.getItem("user_email");
+      if (!email) return;
+
+      try {
+        const res = await axios.get("http://localhost:8000/google/health-data", {
+          params: { user_email: email },
+        });
+
+        console.log("Google Fit data:", res.data);
+        // setLatest(res.data); // if needed
+      } catch (err) {
+        console.error("Failed to fetch Google Fit health data", err);
+      }
+    };
+
+    fetchGoogleHealthData();
   }, []);
 
   return (
@@ -86,23 +115,24 @@ const Dashboard = () => {
 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+
         <HealthCard
           title="Heart Rate"
-          value={78}
+          value={healthData?.heart_rate ?? "N/A"}
           unit="bpm"
           icon={<FaHeartbeat />}
           color="bg-red-500"
         />
         <HealthCard
           title="Blood Pressure"
-          value="120/80"
+          value={healthData?.blood_pressure ?? "N/A"}
           unit="mmHg"
           icon={<FaTint />}
           color="bg-blue-500"
         />
         <HealthCard
           title="SpO2"
-          value={97}
+          value={healthData?.spo2 ?? "N/A"}
           unit="%"
           icon={<FaLungs />}
           color="bg-green-500"

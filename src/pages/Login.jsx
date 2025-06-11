@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
 
 function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -9,15 +11,28 @@ function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const navigate = useNavigate();
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:8000/auth/login', formData);
+      console.log("Login Success", res.data);   // ✅ Log response
       setMessage('Login successful! ✅');
+      localStorage.setItem("user_email", res.data.email);
+
+      navigate('/dashboard');
+
     } catch (err) {
+      console.error("Login failed", err); // ✅ Log error
       setMessage(err.response?.data?.detail || 'Login failed');
     }
   };
+
+  const handleGoogleLogin = () => {
+    window.location.href = 'http://localhost:8000/auth/google/login';
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -42,6 +57,17 @@ function Login() {
         <button type="submit" className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">
           Login
         </button>
+
+        {/* 🔘 Google Login Button */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full mt-3 bg-red-600 text-white p-2 rounded hover:bg-red-700"
+        >
+          Login with Google
+        </button>
+
+
         {message && <p className="mt-3 text-center text-sm text-gray-700">{message}</p>}
       </form>
     </div>

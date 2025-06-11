@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 from dotenv import load_dotenv
 
+
 load_dotenv()
 
 router = APIRouter()
@@ -139,7 +140,9 @@ def google_callback(request: Request, db: Session = Depends(get_db)):
 
     # Optional: Create a JWT token or session here
 
-    return {"message": "Login successful", "user": {"email": email, "name": name}}
+    frontend_url = f"http://localhost:3000/oauth-success?email={email}"
+    return RedirectResponse(frontend_url)
+
 
 @router.get("/auth/fitness/heart-rate")
 def get_heart_rate_data(db: Session = Depends(get_db), email: str = "testuser@example.com"):

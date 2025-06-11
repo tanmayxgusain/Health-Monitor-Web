@@ -1,5 +1,6 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+
 import {
   FaBars,
   FaTachometerAlt,
@@ -8,18 +9,29 @@ import {
 } from "react-icons/fa";
 
 const Sidebar = ({ collapsed, toggleSidebar }) => {
+
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/login");
+  };
+
   const linkClasses = ({ isActive }) =>
-    `flex items-center gap-3 px-4 py-2 rounded-lg transition-all ${
-      isActive
-        ? "bg-blue-600 text-white"
-        : "text-gray-700 hover:bg-blue-100 hover:text-blue-600"
+    `flex items-center gap-3 px-4 py-2 rounded-lg transition-all ${isActive
+      ? "bg-blue-600 text-white"
+      : "text-gray-700 hover:bg-blue-100 hover:text-blue-600"
     }`;
+
+
+
+
+
 
   return (
     <div
-      className={`h-screen bg-white shadow-md transition-all duration-300 ease-in-out ${
-        collapsed ? "w-[80px]" : "w-[250px]"
-      }`}
+      className={`h-screen bg-white shadow-md transition-all duration-300 ease-in-out ${collapsed ? "w-[80px]" : "w-[250px]"
+        }`}
     >
       <div className="flex justify-between items-center p-4">
         {!collapsed && (
@@ -43,6 +55,8 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
           <FaSignOutAlt />
           {!collapsed && <span>Logout</span>}
         </NavLink>
+
+
       </nav>
     </div>
   );
