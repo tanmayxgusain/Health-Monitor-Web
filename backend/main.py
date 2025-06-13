@@ -7,7 +7,10 @@ from routers import healthdata
 
 from routers import google_auth 
 
+from routers.google_health import router as google_health_router
 
+
+from routers.google_health import router as google_health_router
 
 app = FastAPI()
 
@@ -25,6 +28,7 @@ app.include_router(auth.router)
 app.include_router(healthdata.router)
 
 app.include_router(google_auth.router)
+app.include_router(google_health_router)
 
 @app.get("/")
 def root():

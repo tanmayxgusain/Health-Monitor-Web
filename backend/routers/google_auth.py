@@ -18,6 +18,9 @@ load_dotenv()
 
 router = APIRouter()
 
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+
 # Replace these with your actual credentials
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -171,31 +174,91 @@ def get_heart_rate_data(db: Session = Depends(get_db), email: str = "testuser@ex
     return response.json()
 
 
+
+GOOGLE_FIT_API_URL = "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
+
+# Define data source types
+DATA_TYPES = {
+    "heart_rate": "com.google.heart_rate.bpm",
+    "blood_pressure": "com.google.blood_pressure",
+    "spo2": "com.google.oxygen_saturation"
+}
+
+
+def build_request_body(data_type, start_time_millis, end_time_millis):
+    return {
+        "aggregateBy": [{
+            "dataTypeName": data_type
+        }],
+        "bucketByTime": { "durationMillis": 3600000 },  # hourly buckets
+        "startTimeMillis": start_time_millis,
+        "endTimeMillis": end_time_millis
+    }
+
+
 @router.get("/google/health-data")
 def get_health_data(user_email: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_email).first()
     if not user or not user.access_token:
-        raise HTTPException(status_code=401, detail="User not authenticated")
+        raise HTTPException(status_code=400, detail="Google account not linked")
+
+    access_token = user.access_token
+
+    # Time range: last 24 hours
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(days=1)
+    start_millis = int(start_time.timestamp() * 1000)
+    end_millis = int(end_time.timestamp() * 1000)
 
     headers = {
-        "Authorization": f"Bearer {user.access_token}"
+        "Authorization": f"Bearer {access_token}"
     }
 
-    dataset_url = "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
+    results = {}
 
-    # Set start/end times (last 24h) in nanoseconds
-    import time
-    end_time = int(time.time() * 1e9)
-    start_time = end_time - 24 * 60 * 60 * int(1e9)
+    for key, data_type in DATA_TYPES.items():
+        res = requests.post(
+            GOOGLE_FIT_API_URL,
+            headers=headers,
+            json=build_request_body(data_type, start_millis, end_millis)
+        )
 
-    body = {
-        "aggregateBy": [{
-            "dataTypeName": "com.google.heart_rate.bpm"
-        }],
-        "bucketByTime": {"durationMillis": 3600000},  # hourly
-        "startTimeMillis": int(start_time / 1e6),
-        "endTimeMillis": int(end_time / 1e6)
-    }
+        if res.status_code != 200:
+            results[key] = []
+            continue
 
-    response = requests.post(dataset_url, headers=headers, json=body)
-    return response.json()
+        buckets = res.json().get("bucket", [])
+        extracted = []
+
+        for bucket in buckets:
+            for dataset in bucket.get("dataset", []):
+                for point in dataset.get("point", []):
+                    ts = int(point["startTimeNanos"]) // 1_000_000
+                    if data_type == "com.google.blood_pressure":
+                        # Systolic and Diastolic from multiple fields
+                        systolic = None
+                        diastolic = None
+                        for val in point["value"]:
+                            if val["mapVal"][0]["key"] == "systolic":
+                                systolic = val["mapVal"][0]["value"]["fpVal"]
+                            elif val["mapVal"][0]["key"] == "diastolic":
+                                diastolic = val["mapVal"][0]["value"]["fpVal"]
+                        if systolic and diastolic:
+                            extracted.append({
+                                "timestamp": ts,
+                                "systolic": int(systolic),
+                                "diastolic": int(diastolic)
+                            })
+                    else:
+                        value = point["value"][0].get("fpVal")
+                        if value is not None:
+                            extracted.append({
+                                "timestamp": ts,
+                                "value": int(value)
+                            })
+
+        results[key] = extracted
+
+    return results
+
+
