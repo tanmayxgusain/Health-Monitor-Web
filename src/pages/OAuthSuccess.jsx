@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 
 export default function OAuthSuccess() {
   const navigate = useNavigate();
@@ -11,15 +10,14 @@ export default function OAuthSuccess() {
     const email = query.get("email");
 
     if (email) {
-      // Optional: Save in state/localStorage
       localStorage.setItem("user_email", email);
-
-      // Navigate to dashboard
-      navigate("/dashboard");
+      navigate("/dashboard", { replace: true });
     } else {
-      navigate("/login");
+      navigate("/login" , { replace: true });
     }
-  }, [location, navigate]);
+  }, [location.search]); // ✅ Triggers effect when URL changes
 
-  return <div className="text-center mt-10">Logging you in...</div>;
+  return (
+    <div className="text-center mt-10">Logging you in...</div>
+  );
 }

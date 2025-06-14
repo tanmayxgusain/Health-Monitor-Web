@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import StatCard from "../components/StatCard";
 import LineChartPanel from "../components/LineChartPanel";
-import { generateChartData } from "../utils/fakeData";
+
 
 import { Link } from 'react-router-dom';
 import MainLayout from "../layouts/MainLayout";
@@ -15,36 +15,22 @@ import { FaHeartbeat, FaTint, FaLungs } from "react-icons/fa";
 
 import api from "../api/axios";
 import axios from "axios";
+import PeriodSelector from "../components/PeriodSelector";
 
-const heartRateData = [
-  { time: "10 AM", value: 76 },
-  { time: "11 AM", value: 78 },
-  { time: "12 PM", value: 82 },
-  { time: "1 PM", value: 79 },
-  { time: "2 PM", value: 77 },
-];
 
-const bpData = [
-  { time: "10 AM", value: 120 },
-  { time: "11 AM", value: 118 },
-  { time: "12 PM", value: 121 },
-  { time: "1 PM", value: 119 },
-  { time: "2 PM", value: 122 },
-];
-
-const spo2Data = [
-  { time: "10 AM", value: 96 },
-  { time: "11 AM", value: 97 },
-  { time: "12 PM", value: 98 },
-  { time: "1 PM", value: 96 },
-  { time: "2 PM", value: 97 },
-];
 
 
 const Dashboard = () => {
-  const heartRateData = generateChartData("HR");
-  const spo2Data = generateChartData("SpO2");
-  const bpData = generateChartData("BP");
+  const [period, setPeriod] = useState("Today");
+  const [heartRateData, setHeartRateData] = useState("--");
+  const [bpData, setBpData] = useState("--");
+  const [spo2Data, setSpo2Data] = useState("--");
+  // Add these states
+  const [customStart, setCustomStart] = useState(null);
+  const [customEnd, setCustomEnd] = useState(null);
+
+
+  const email = localStorage.getItem("user_email");
 
   const [latest, setLatest] = useState({});
   const [history, setHistory] = useState({
@@ -52,6 +38,8 @@ const Dashboard = () => {
     blood_pressure: [],
     spo2: [],
   });
+  
+
 
   const [healthData, setHealthData] = useState(null);
   const navigate = useNavigate();
@@ -59,6 +47,13 @@ const Dashboard = () => {
     const email = localStorage.getItem("user_email");
     if (!email) navigate("/login");
   }, []);
+
+  useEffect(() => {
+    console.log("Heart:", heartRateData);
+    console.log("BP:", bpData);
+    console.log("SpO2:", spo2Data);
+  }, [heartRateData, bpData, spo2Data]);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -77,67 +72,169 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
+
   useEffect(() => {
-    const fetchGoogleHealthData = async () => {
-      const email = localStorage.getItem("user_email");
-      if (!email) return;
+    const email = localStorage.getItem("user_email");
+    if (!email) return;
+
+    const getPeriodRange = () => {
+      const today = new Date();
+      let start, end;
+
+      if (period === "Today") {
+        start = new Date(today.setHours(0, 0, 0, 0));
+        end = new Date();
+      } else if (period === "Yesterday") {
+        const y = new Date(today.setDate(today.getDate() - 1));
+        start = new Date(y.setHours(0, 0, 0, 0));
+        end = new Date(y.setHours(23, 59, 59, 999));
+      } else {
+        return null;
+      }
+
+      return {
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+      };
+    };
+
+    const fetchData = async () => {
+      let range;
+
+      if (period === "Custom") {
+        if (!customStart || !customEnd) return;
+        range = {
+          start_date: customStart,
+          end_date: customEnd,
+        };
+      } else {
+        range = { period: period.toLowerCase() };
+      }
 
       try {
         const res = await axios.get("http://localhost:8000/google/health-data", {
-          params: { user_email: email },
+          params: { user_email: email, ...range }
         });
 
-        console.log("Google Fit data:", res.data);
-        // setLatest(res.data); // if needed
+        const data = res.data;
+
+        const hr = data.heart_rate.at(-1)?.value || "--";
+        const sp = data.spo2.at(-1)?.value || "--";
+        const bp = data.blood_pressure.at(-1)
+          ? `${data.blood_pressure.at(-1).systolic}/${data.blood_pressure.at(-1).diastolic}`
+          : "--";
+
+        setHeartRateData(hr);
+        setSpo2Data(sp);
+        setBpData(bp);
       } catch (err) {
-        console.error("Failed to fetch Google Fit health data", err);
+        console.error("Error fetching period data:", err);
       }
     };
 
-    fetchGoogleHealthData();
-  }, []);
+    fetchData();
+  }, [period, customStart, customEnd]);
+
+
+
 
   return (
 
 
     <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between bg-white shadow p-4 rounded">
+        <h1 className="text-xl font-bold text-green-700">Smart Health Monitor</h1>
+        <p className="text-sm text-gray-500">Welcome, {email}</p>
+      </div>
+
       <h1 className="text-2xl font-bold text-gray-800">Health Dashboard</h1>
 
 
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <LineChartPanel title="Heart Rate Over Time" data={heartRateData} color="#ef4444" />
-        <LineChartPanel title="Blood Pressure Trend" data={bpData} color="#3b82f6" />
-        <LineChartPanel title="SpO₂ Trend" data={spo2Data} color="#10b981" />
-      </div>
+
+      <PeriodSelector period={period} setPeriod={setPeriod} />
+      {period === "Custom" && (
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div>
+            <label className="block text-sm">Start Date:</label>
+            <input
+              type="date"
+              onChange={(e) => {
+                setCustomStart(e.target.value);
+                setCustomEnd(""); // Reset end date if start changes
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm">End Date:</label>
+            <input
+              type="date"
+              value={customEnd || ""}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              min={customStart} // Prevent choosing an earlier date
+              disabled={!customStart}
+            />
+          </div>
+        </div>
+      )}
+
+
+
+
 
 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-
         <HealthCard
           title="Heart Rate"
-          value={healthData?.heart_rate ?? "N/A"}
+          value={heartRateData}
+          /*value={
+             heartRateData && heartRateData.length
+               ? heartRateData.at(-1).value
+               : "--"
+           } */
+
           unit="bpm"
           icon={<FaHeartbeat />}
           color="bg-red-500"
         />
+
         <HealthCard
           title="Blood Pressure"
-          value={healthData?.blood_pressure ?? "N/A"}
+          value={bpData}
+          /*
+          value={
+            bpData && bpData.length
+              ? bpData.at(-1).value
+              : "--"
+          }
+              */
           unit="mmHg"
           icon={<FaTint />}
           color="bg-blue-500"
         />
+
         <HealthCard
           title="SpO2"
-          value={healthData?.spo2 ?? "N/A"}
+          value={spo2Data}
+          /*value={
+            spo2Data && spo2Data.length
+              ? spo2Data.at(-1).value
+              : "--"
+          }
+              */
           unit="%"
           icon={<FaLungs />}
           color="bg-green-500"
         />
       </div>
+      <div className="min-h-[40px]">
+        <p className="text-sm text-gray-500 mt-2 text-center">
+          Last updated at: {new Date().toLocaleTimeString()}
+        </p>
+
+      </div>
+
 
     </div>
 

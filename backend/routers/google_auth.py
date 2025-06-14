@@ -7,7 +7,7 @@ import requests
 import os
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User
+from models import User, HealthData
 
 from urllib.parse import urlencode
 
