@@ -1,7 +1,9 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Landing = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 via-white to-blue-200 flex flex-col items-center justify-center p-6">
       <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4 text-center">
@@ -12,19 +14,19 @@ const Landing = () => {
         and secure blockchain-based data storage.
       </p>
 
-      <div className="flex space-x-4">
-        <Link
-          to="/login"
-          className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition"
+      <div className="space-x-4">
+        <button
+          className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
+          onClick={() => navigate("/login")}
         >
           Login
-        </Link>
-        <Link
-          to="/signup"
-          className="px-6 py-3 bg-gray-200 text-blue-600 rounded-xl hover:bg-gray-300 transition"
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
+          onClick={() => navigate("/signup")}
         >
           Sign Up
-        </Link>
+        </button>
       </div>
 
       <footer className="absolute bottom-4 text-gray-500 text-sm">
