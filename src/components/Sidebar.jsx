@@ -43,7 +43,7 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
       </div>
 
       <nav className="flex flex-col space-y-2 p-2">
-        <NavLink to="/" className={linkClasses}>
+        <NavLink to="/dashboard" className={linkClasses}>
           <FaTachometerAlt />
           {!collapsed && <span>Dashboard</span>}
         </NavLink>

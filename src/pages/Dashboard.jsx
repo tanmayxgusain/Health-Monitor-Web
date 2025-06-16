@@ -1,36 +1,43 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import StatCard from "../components/StatCard";
-import LineChartPanel from "../components/LineChartPanel";
+import { FaHeartbeat, FaTint, FaLungs, FaBed, FaShoePrints,FaFireAlt } from "react-icons/fa";
+import axios from "axios";
+import api from "../api/axios";
 
-
-import { Link } from 'react-router-dom';
-import MainLayout from "../layouts/MainLayout";
-
+import PeriodSelector from "../components/PeriodSelector";
 import HealthCard from "../components/HealthCard";
 
+import StatCard from "../components/StatCard";
+import LineChartPanel from "../components/LineChartPanel";
+import { Link } from 'react-router-dom';
+import MainLayout from "../layouts/MainLayout";
 import HealthChart from "../components/HealthChart";
-import { FaHeartbeat, FaTint, FaLungs } from "react-icons/fa";
 
-import api from "../api/axios";
-import axios from "axios";
-import PeriodSelector from "../components/PeriodSelector";
-
-
-
+const iconMap = {
+  heart_rate: { icon: <FaHeartbeat />, unit: "bpm", color: "bg-red-500", title: "Heart Rate" },
+  blood_pressure: { icon: <FaTint />, unit: "mmHg", color: "bg-blue-500", title: "Blood Pressure" },
+  spo2: { icon: <FaLungs />, unit: "%", color: "bg-green-500", title: "SpO₂" },
+  sleep: { icon: <FaBed />, unit: "hrs", color: "bg-indigo-500", title: "Sleep" },
+  activity: { icon: <FaShoePrints />, unit: "", color: "bg-yellow-600", title: "Activity" },
+  steps: { icon: <FaShoePrints />, unit: "steps", color: "bg-orange-500", title: "Steps" },
+  calories: { icon: <FaFireAlt />, unit: "kcal", color: "bg-pink-600", title: "Calories" },
+  distance: { icon: <FaShoePrints />, unit: "km", color: "bg-purple-600", title: "Distance" },
+};
 
 const Dashboard = () => {
   const [period, setPeriod] = useState("Today");
-  const [heartRateData, setHeartRateData] = useState("--");
-  const [bpData, setBpData] = useState("--");
-  const [spo2Data, setSpo2Data] = useState("--");
   // Add these states
   const [customStart, setCustomStart] = useState(null);
   const [customEnd, setCustomEnd] = useState(null);
-
-
+  const [healthData, setHealthData] = useState({ });
+  const [availableMetrics, setAvailableMetrics] = useState({});
+  const navigate = useNavigate();
   const email = localStorage.getItem("user_email");
+
+  const [heartRateData, setHeartRateData] = useState("--");
+  const [bpData, setBpData] = useState("--");
+  const [spo2Data, setSpo2Data] = useState("--");
 
   const [latest, setLatest] = useState({});
   const [history, setHistory] = useState({
@@ -38,21 +45,12 @@ const Dashboard = () => {
     blood_pressure: [],
     spo2: [],
   });
+
   
 
-
-  const [healthData, setHealthData] = useState(null);
-  const navigate = useNavigate();
   useEffect(() => {
-    const email = localStorage.getItem("user_email");
     if (!email) navigate("/login");
   }, []);
-
-  useEffect(() => {
-    console.log("Heart:", heartRateData);
-    console.log("BP:", bpData);
-    console.log("SpO2:", spo2Data);
-  }, [heartRateData, bpData, spo2Data]);
 
 
   useEffect(() => {
@@ -74,29 +72,28 @@ const Dashboard = () => {
 
 
   useEffect(() => {
-    const email = localStorage.getItem("user_email");
     if (!email) return;
 
-    const getPeriodRange = () => {
-      const today = new Date();
-      let start, end;
+    // const getPeriodRange = () => {
+    //   const today = new Date();
+    //   let start, end;
 
-      if (period === "Today") {
-        start = new Date(today.setHours(0, 0, 0, 0));
-        end = new Date();
-      } else if (period === "Yesterday") {
-        const y = new Date(today.setDate(today.getDate() - 1));
-        start = new Date(y.setHours(0, 0, 0, 0));
-        end = new Date(y.setHours(23, 59, 59, 999));
-      } else {
-        return null;
-      }
+    //   if (period === "Today") {
+    //     start = new Date(today.setHours(0, 0, 0, 0));
+    //     end = new Date();
+    //   } else if (period === "Yesterday") {
+    //     const y = new Date(today.setDate(today.getDate() - 1));
+    //     start = new Date(y.setHours(0, 0, 0, 0));
+    //     end = new Date(y.setHours(23, 59, 59, 999));
+    //   } else {
+    //     return null;
+    //   }
 
-      return {
-        start_time: start.toISOString(),
-        end_time: end.toISOString(),
-      };
-    };
+    //   return {
+    //     start_time: start.toISOString(),
+    //     end_time: end.toISOString(),
+    //   };
+    // };
 
     const fetchData = async () => {
       let range;
@@ -117,6 +114,10 @@ const Dashboard = () => {
         });
 
         const data = res.data;
+        console.log("Fetched health data:", data);
+
+
+        const latestMetrics = {};
 
         const hr = data.heart_rate.at(-1)?.value || "--";
         const sp = data.spo2.at(-1)?.value || "--";
@@ -127,6 +128,7 @@ const Dashboard = () => {
         setHeartRateData(hr);
         setSpo2Data(sp);
         setBpData(bp);
+        
       } catch (err) {
         console.error("Error fetching period data:", err);
       }
@@ -185,48 +187,27 @@ const Dashboard = () => {
 
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        <HealthCard
-          title="Heart Rate"
-          value={heartRateData}
-          /*value={
-             heartRateData && heartRateData.length
-               ? heartRateData.at(-1).value
-               : "--"
-           } */
+        {Object.entries(availableMetrics).map(([key, value]) => {
+          const meta = iconMap[key] || {
+            title: key,
+            icon: <span className="text-xl">📊</span>,
+            unit: "",
+            color: "bg-gray-500",
+          };
 
-          unit="bpm"
-          icon={<FaHeartbeat />}
-          color="bg-red-500"
-        />
 
-        <HealthCard
-          title="Blood Pressure"
-          value={bpData}
-          /*
-          value={
-            bpData && bpData.length
-              ? bpData.at(-1).value
-              : "--"
-          }
-              */
-          unit="mmHg"
-          icon={<FaTint />}
-          color="bg-blue-500"
-        />
 
-        <HealthCard
-          title="SpO2"
-          value={spo2Data}
-          /*value={
-            spo2Data && spo2Data.length
-              ? spo2Data.at(-1).value
-              : "--"
-          }
-              */
-          unit="%"
-          icon={<FaLungs />}
-          color="bg-green-500"
-        />
+          return (
+            <HealthCard
+              key={key}
+              title={meta.title}
+              value={value || "--"}
+              unit={meta.unit}
+              icon={meta.icon}
+              color={meta.color}
+            />
+          );
+        })}
       </div>
       <div className="min-h-[40px]">
         <p className="text-sm text-gray-500 mt-2 text-center">

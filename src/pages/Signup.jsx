@@ -10,6 +10,8 @@ function Signup() {
   });
 
   const [message, setMessage] = useState('');
+  const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const navigate = useNavigate();
 
@@ -21,10 +23,16 @@ function Signup() {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:8000/auth/signup', formData);
-      setMessage('Signup successful! 🎉');
-      navigate("/login");
+      setSuccessMsg("Signup successful! Redirecting to login...");
+      setErrorMsg("");
+
+      // Wait 2 seconds, then navigate
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
     } catch (err) {
-      setMessage(err.response?.data?.detail || 'Signup failed');
+      setErrorMsg("Signup failed. Please try again.");
+      setSuccessMsg("");
     }
   };
 
@@ -72,10 +80,16 @@ function Signup() {
             <p className="mt-3 text-center text-sm text-gray-700">{message}</p>
           )}
         </form>
+        {successMsg && (
+          <p className="text-green-600 text-center mt-4">{successMsg}</p>
+        )}
+        {errorMsg && (
+          <p className="text-red-600 text-center mt-4">{errorMsg}</p>
+        )}
       </div>
     </div>
   );
 
-}
+};
 
 export default Signup;
