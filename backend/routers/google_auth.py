@@ -40,6 +40,20 @@ SCOPES = [
     "profile"
 ]
 
+async def refresh_access_token(refresh_token: str):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(GOOGLE_TOKEN_URL, data={
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "client_secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "refresh_token": refresh_token,
+            "grant_type": "refresh_token",
+        })
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=401, detail="Unable to refresh token")
+
+    return response.json()
+
 @router.get("/auth/google/login")
 async def login():
     query = urlencode({
@@ -221,18 +235,29 @@ def build_request_body(data_type, start_time_millis, end_time_millis):
 
 
 @router.get("/google/health-data")
-async def get_health_data(user_email: str,period: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def get_health_data(user_email: str,period: Optional[str] = "today", db: AsyncSession = Depends(get_db)):
     # user = db.query(User).filter(User.email == user_email).first()
     result = await db.execute(select(User).where(User.email == user_email))
     user = result.scalars().first()
 
     if not user or not user.access_token:
         raise HTTPException(status_code=400, detail="Google account not linked")
+    
+
+    if period == "today":
+        end_time = datetime.utcnow()
+        start_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif period == "yesterday":
+        end_time = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        start_time = end_time - timedelta(days=1)
+    else:
+        # fallback to last 24h
+        end_time = datetime.utcnow()
+        start_time = end_time - timedelta(days=1)
+
 
 
     # Time range: last 24 hours
-    end_time = datetime.utcnow()
-    start_time = end_time - timedelta(days=1)
     start_millis = int(start_time.timestamp() * 1000)
     end_millis = int(end_time.timestamp() * 1000)
 
@@ -251,9 +276,27 @@ async def get_health_data(user_email: str,period: Optional[str] = None, db: Asyn
                 json=build_request_body(data_type, start_millis, end_millis)
             )
 
+            # if response.status_code == 401:
+            #     raise HTTPException(status_code=401, detail="Invalid or expired token. Please re-authenticate.")
+
+            # Retry once if 401
+            if response.status_code == 401 and user.refresh_token:
+                new_tokens = await refresh_access_token(user.refresh_token)
+
+                user.access_token = new_tokens["access_token"]
+                await db.commit()  # Save new access token
+
+                headers["Authorization"] = f"Bearer {user.access_token}"
+                response = await client.post(
+                    GOOGLE_FIT_API_URL,
+                    headers=headers,
+                    json=build_request_body(data_type, start_millis, end_millis)
+                )
+
             if response.status_code != 200:
                 results[key] = []
                 continue
+
 
             buckets = response.json().get("bucket", [])
 
@@ -291,7 +334,7 @@ async def get_health_data(user_email: str,period: Optional[str] = None, db: Asyn
 
             results[key] = extracted
 
-
+    print("Final results to return:", results)
     return results
 
 

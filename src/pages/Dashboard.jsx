@@ -31,7 +31,7 @@ const Dashboard = () => {
   const [customStart, setCustomStart] = useState(null);
   const [customEnd, setCustomEnd] = useState(null);
   // const [healthData, setHealthData] = useState({});
- 
+
   const navigate = useNavigate();
   const email = localStorage.getItem("user_email");
 
@@ -121,9 +121,22 @@ const Dashboard = () => {
 
         // const latestMetrics = {};
 
-        const hr = data.heart_rate.at(-1)?.value || "--";
-        const sp = data.spo2.at(-1)?.value || "--";
-        const bp = data.blood_pressure.at(-1)
+        // const hr = data.heart_rate.at(-1)?.value || "--";
+        // const sp = data.spo2.at(-1)?.value || "--";
+        // const bp = data.blood_pressure.at(-1)
+        //   ? `${data.blood_pressure.at(-1).systolic}/${data.blood_pressure.at(-1).diastolic}`
+        //   : "--";
+
+
+        const hr = Array.isArray(data.heart_rate) && data.heart_rate.length
+          ? data.heart_rate.at(-1).value
+          : "--";
+
+        const sp = Array.isArray(data.spo2) && data.spo2.length
+          ? data.spo2.at(-1).value
+          : "--";
+
+        const bp = Array.isArray(data.blood_pressure) && data.blood_pressure.length
           ? `${data.blood_pressure.at(-1).systolic}/${data.blood_pressure.at(-1).diastolic}`
           : "--";
 
@@ -131,7 +144,7 @@ const Dashboard = () => {
         setSpo2Data(sp);
         setBpData(bp);
 
-      
+
 
 
 
@@ -140,6 +153,7 @@ const Dashboard = () => {
         setHeartRateData("--");
         setSpo2Data("--");
         setBpData("--");
+      
       }
     };
 
@@ -166,7 +180,7 @@ const Dashboard = () => {
   //       setSpo2Data(latestSpO2);
   //       setBpData(latestBP ? `${latestBP.systolic}/${latestBP.diastolic}` : "--");
 
-    
+
 
   //     } catch (error) {
   //       console.error("Failed to fetch live health data:", error);
