@@ -10,8 +10,6 @@ from routers import google_auth
 from routers.google_health import router as google_health_router
 
 
-from routers.google_health import router as google_health_router
-
 app = FastAPI()
 
 # Enable CORS
@@ -37,4 +35,4 @@ def root():
 
 
 # Create tables on startup
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)

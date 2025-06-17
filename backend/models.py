@@ -6,6 +6,14 @@ from datetime import datetime
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import relationship, declarative_base
 
+from sqlalchemy.future import select
+from database import async_session  # Make sure this is imported
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
 
 
 class User(Base):
@@ -22,6 +30,13 @@ class User(Base):
     refresh_token = Column(String, nullable=True)
 
     health_data = relationship("HealthData", back_populates="user")
+
+    @classmethod
+    async def get_by_email(cls, db: AsyncSession, email: str):
+        async with async_session() as session:
+            # result = await session.execute(select(cls).where(cls.email == email))
+            result = await db.execute(select(cls).where(cls.email == email))
+            return result.scalars().first()
 
 
 

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHeartbeat, FaTint, FaLungs, FaBed, FaShoePrints,FaFireAlt } from "react-icons/fa";
+import { FaHeartbeat, FaTint, FaLungs, FaBed, FaShoePrints, FaFireAlt } from "react-icons/fa";
 import axios from "axios";
 import api from "../api/axios";
 
@@ -14,24 +14,24 @@ import { Link } from 'react-router-dom';
 import MainLayout from "../layouts/MainLayout";
 import HealthChart from "../components/HealthChart";
 
-const iconMap = {
-  heart_rate: { icon: <FaHeartbeat />, unit: "bpm", color: "bg-red-500", title: "Heart Rate" },
-  blood_pressure: { icon: <FaTint />, unit: "mmHg", color: "bg-blue-500", title: "Blood Pressure" },
-  spo2: { icon: <FaLungs />, unit: "%", color: "bg-green-500", title: "SpO₂" },
-  sleep: { icon: <FaBed />, unit: "hrs", color: "bg-indigo-500", title: "Sleep" },
-  activity: { icon: <FaShoePrints />, unit: "", color: "bg-yellow-600", title: "Activity" },
-  steps: { icon: <FaShoePrints />, unit: "steps", color: "bg-orange-500", title: "Steps" },
-  calories: { icon: <FaFireAlt />, unit: "kcal", color: "bg-pink-600", title: "Calories" },
-  distance: { icon: <FaShoePrints />, unit: "km", color: "bg-purple-600", title: "Distance" },
-};
+// const iconMap = {
+//   heart_rate: { icon: <FaHeartbeat />, unit: "bpm", color: "bg-red-500", title: "Heart Rate" },
+//   blood_pressure: { icon: <FaTint />, unit: "mmHg", color: "bg-blue-500", title: "Blood Pressure" },
+//   spo2: { icon: <FaLungs />, unit: "%", color: "bg-green-500", title: "SpO₂" },
+//   sleep: { icon: <FaBed />, unit: "hrs", color: "bg-indigo-500", title: "Sleep" },
+//   activity: { icon: <FaShoePrints />, unit: "", color: "bg-yellow-600", title: "Activity" },
+//   steps: { icon: <FaShoePrints />, unit: "steps", color: "bg-orange-500", title: "Steps" },
+//   calories: { icon: <FaFireAlt />, unit: "kcal", color: "bg-pink-600", title: "Calories" },
+//   distance: { icon: <FaShoePrints />, unit: "km", color: "bg-purple-600", title: "Distance" },
+// };
 
 const Dashboard = () => {
   const [period, setPeriod] = useState("Today");
   // Add these states
   const [customStart, setCustomStart] = useState(null);
   const [customEnd, setCustomEnd] = useState(null);
-  const [healthData, setHealthData] = useState({ });
-  const [availableMetrics, setAvailableMetrics] = useState({});
+  // const [healthData, setHealthData] = useState({});
+ 
   const navigate = useNavigate();
   const email = localStorage.getItem("user_email");
 
@@ -39,36 +39,38 @@ const Dashboard = () => {
   const [bpData, setBpData] = useState("--");
   const [spo2Data, setSpo2Data] = useState("--");
 
-  const [latest, setLatest] = useState({});
-  const [history, setHistory] = useState({
-    heart_rate: [],
-    blood_pressure: [],
-    spo2: [],
-  });
+  // const [latest, setLatest] = useState({});
+  // const [history, setHistory] = useState({
+  //   heart_rate: [],
+  //   blood_pressure: [],
+  //   spo2: [],
+  // });
 
-  
+  // const [error, setError] = useState(null);
+
+
 
   useEffect(() => {
     if (!email) navigate("/login");
   }, []);
 
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [latestRes, historyRes] = await Promise.all([
-          api.get("/healthdata/latest"),
-          api.get("/healthdata/history"),
-        ]);
-        setLatest(latestRes.data);
-        setHistory(historyRes.data);
-      } catch (err) {
-        console.error("Error fetching health data:", err);
-      }
-    };
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const [latestRes, historyRes] = await Promise.all([
+  //         api.get("/healthdata/latest"),
+  //         api.get("/healthdata/history"),
+  //       ]);
+  //       setLatest(latestRes.data);
+  //       setHistory(historyRes.data);
+  //     } catch (err) {
+  //       console.error("Error fetching health data:", err);
+  //     }
+  //   };
 
-    fetchData();
-  }, []);
+  //   fetchData();
+  // }, []);
 
 
   useEffect(() => {
@@ -117,7 +119,7 @@ const Dashboard = () => {
         console.log("Fetched health data:", data);
 
 
-        const latestMetrics = {};
+        // const latestMetrics = {};
 
         const hr = data.heart_rate.at(-1)?.value || "--";
         const sp = data.spo2.at(-1)?.value || "--";
@@ -128,14 +130,52 @@ const Dashboard = () => {
         setHeartRateData(hr);
         setSpo2Data(sp);
         setBpData(bp);
-        
+
+      
+
+
+
       } catch (err) {
         console.error("Error fetching period data:", err);
+        setHeartRateData("--");
+        setSpo2Data("--");
+        setBpData("--");
       }
     };
 
     fetchData();
   }, [period, customStart, customEnd]);
+
+
+  // useEffect(() => {
+  //   const fetchHealthData = async () => {
+  //     const email = localStorage.getItem("user_email");
+  //     try {
+  //       const res = await api.get(`/health-data`, {
+  //         params: { user_email: email },
+  //       });
+
+  //       const data = res.data;
+
+  //       // Get latest readings
+  //       const latestHeart = data.heart_rate?.[data.heart_rate.length - 1]?.value || "--";
+  //       const latestSpO2 = data.spo2?.[data.spo2.length - 1]?.value || "--";
+  //       const latestBP = data.blood_pressure?.[data.blood_pressure.length - 1] || null;
+
+  //       setHeartRateData(latestHeart);
+  //       setSpo2Data(latestSpO2);
+  //       setBpData(latestBP ? `${latestBP.systolic}/${latestBP.diastolic}` : "--");
+
+    
+
+  //     } catch (error) {
+  //       console.error("Failed to fetch live health data:", error);
+  //     }
+  //   };
+
+  //   fetchHealthData();
+  // }, []);
+
 
 
 
@@ -180,40 +220,34 @@ const Dashboard = () => {
         </div>
       )}
 
-
-
-
-
-
-
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {Object.entries(availableMetrics).map(([key, value]) => {
-          const meta = iconMap[key] || {
-            title: key,
-            icon: <span className="text-xl">📊</span>,
-            unit: "",
-            color: "bg-gray-500",
-          };
+        <HealthCard
+          title="Heart Rate"
+          value={heartRateData}
+          unit="bpm"
+          icon={<FaHeartbeat />}
+          color="bg-red-500"
+        />
+        <HealthCard
+          title="Blood Pressure"
+          value={bpData}
+          unit="mmHg"
+          icon={<FaTint />}
+          color="bg-blue-500"
+        />
+        <HealthCard
+          title="SpO₂"
+          value={spo2Data}
+          unit="%"
+          icon={<FaLungs />}
+          color="bg-green-500"
+        />
 
-
-
-          return (
-            <HealthCard
-              key={key}
-              title={meta.title}
-              value={value || "--"}
-              unit={meta.unit}
-              icon={meta.icon}
-              color={meta.color}
-            />
-          );
-        })}
       </div>
       <div className="min-h-[40px]">
         <p className="text-sm text-gray-500 mt-2 text-center">
           Last updated at: {new Date().toLocaleTimeString()}
         </p>
-
       </div>
 
 
