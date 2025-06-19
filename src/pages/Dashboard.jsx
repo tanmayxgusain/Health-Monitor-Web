@@ -74,91 +74,80 @@ const Dashboard = () => {
 
 
   useEffect(() => {
-    if (!email) return;
-
-    // const getPeriodRange = () => {
-    //   const today = new Date();
-    //   let start, end;
-
-    //   if (period === "Today") {
-    //     start = new Date(today.setHours(0, 0, 0, 0));
-    //     end = new Date();
-    //   } else if (period === "Yesterday") {
-    //     const y = new Date(today.setDate(today.getDate() - 1));
-    //     start = new Date(y.setHours(0, 0, 0, 0));
-    //     end = new Date(y.setHours(23, 59, 59, 999));
-    //   } else {
-    //     return null;
-    //   }
-
-    //   return {
-    //     start_time: start.toISOString(),
-    //     end_time: end.toISOString(),
-    //   };
-    // };
 
     const fetchData = async () => {
-      let range;
+      if (!email) return;
+      let heartRate = "--";
+      let spo2 = "--";
+      let bp = "--";
+      // let range;
 
-      if (period === "Custom") {
-        if (!customStart || !customEnd) return;
-        range = {
-          start_date: customStart,
-          end_date: customEnd,
-        };
-      } else {
-        range = { period: period.toLowerCase() };
-      }
+      // if (period === "Custom") {
+      //   if (!customStart || !customEnd) return;
+      //   range = {
+      //     start_date: customStart,
+      //     end_date: customEnd,
+      //   };
+      // } else {
+      //   range = { period: period.toLowerCase() };
+      // }
 
       try {
-        const res = await axios.get("http://localhost:8000/google/health-data", {
-          params: { user_email: email, ...range }
-        });
+        if (period === "Today") {
+          const res = await axios.get("http://localhost:8000/google/health-data", {
+            params: { user_email: email, period: "today" },
+          });
 
-        const data = res.data;
-        console.log("Fetched health data:", data);
+          const data = res.data;
+          heartRate = data.heart_rate?.at(-1)?.value || "--";
+          spo2 = data.spo2?.at(-1)?.value || "--";
+          const bpData = data.blood_pressure?.at(-1);
+          bp = bpData ? `${bpData.systolic}/${bpData.diastolic}` : "--";
 
+        } else {
+          // History from DB
+          let startDate, endDate;
+          const today = new Date();
 
-        // const latestMetrics = {};
+          if (period === "Yesterday") {
+            const y = new Date(today.setDate(today.getDate() - 1));
+            startDate = new Date(y.setHours(0, 0, 0, 0)).toISOString().split("T")[0];
+            endDate = new Date(y.setHours(23, 59, 59, 999)).toISOString().split("T")[0];
+          } else if (period === "Custom") {
+            if (!customStart || !customEnd) return;
+            startDate = customStart;
+            endDate = customEnd;
+          }
 
-        // const hr = data.heart_rate.at(-1)?.value || "--";
-        // const sp = data.spo2.at(-1)?.value || "--";
-        // const bp = data.blood_pressure.at(-1)
-        //   ? `${data.blood_pressure.at(-1).systolic}/${data.blood_pressure.at(-1).diastolic}`
-        //   : "--";
+          const res = await axios.get("http://localhost:8000/healthdata/history", {
+            params: {
+              user_email: email,
+              start_date: startDate,
+              end_date: endDate,
+            },
+          });
 
+          const data = res.data;
+          heartRate = data.heart_rate?.at(-1)?.value || "--";
+          spo2 = data.spo2?.at(-1)?.value || "--";
+          const bpData = data.blood_pressure?.at(-1);
+          bp = bpData ? `${bpData.systolic}/${bpData.diastolic}` : "--";
+        }
 
-        const hr = Array.isArray(data.heart_rate) && data.heart_rate.length
-          ? data.heart_rate.at(-1).value
-          : "--";
-
-        const sp = Array.isArray(data.spo2) && data.spo2.length
-          ? data.spo2.at(-1).value
-          : "--";
-
-        const bp = Array.isArray(data.blood_pressure) && data.blood_pressure.length
-          ? `${data.blood_pressure.at(-1).systolic}/${data.blood_pressure.at(-1).diastolic}`
-          : "--";
-
-        setHeartRateData(hr);
-        setSpo2Data(sp);
+        // Update cards
+        setHeartRateData(heartRate);
+        setSpo2Data(spo2);
         setBpData(bp);
 
-
-
-
-
       } catch (err) {
-        console.error("Error fetching period data:", err);
-        setHeartRateData("--");
-        setSpo2Data("--");
-        setBpData("--");
-      
+        console.error("Error fetching health data:", err);
       }
     };
 
-    fetchData();
+    fetchHealthData();
   }, [period, customStart, customEnd]);
+
+ 
 
 
   // useEffect(() => {

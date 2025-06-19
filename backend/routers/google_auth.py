@@ -332,9 +332,68 @@ async def get_health_data(user_email: str,period: Optional[str] = "today", db: A
                                     "value": int(value)
                                 })
 
-            results[key] = extracted
+            # results[key] = extracted
+            for entry in extracted:
+                ts = datetime.fromtimestamp(entry["timestamp"] / 1000)
+
+                if key == "blood_pressure":
+                    new_entry = HealthData(
+                        user_id=user.id,
+                        metric_type=key,
+                        systolic=entry["systolic"],
+                        diastolic=entry["diastolic"],
+                        timestamp=ts
+                    )
+
+                else:
+                    new_entry = HealthData(
+                        user_id=user.id,
+                        metric_type=key,
+                        value=entry["value"],
+                        timestamp=ts
+                    )
+
+                db.add(new_entry)
+            await db.commit()
 
     print("Final results to return:", results)
     return results
+
+
+@router.get("/healthdata/history")
+async def get_health_data_history(user_email: str, start_date: str, end_date: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == user_email))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    start_dt = datetime.fromisoformat(start_date)
+    end_dt = datetime.fromisoformat(end_date)
+
+    result = await db.execute(
+        select(HealthData).where(
+            HealthData.user_id == user.id,
+            HealthData.timestamp >= start_dt,
+            HealthData.timestamp <= end_dt
+        )
+    )
+
+    data = result.scalars().all()
+
+    grouped = {}
+    for row in data:
+        if row.metric_type not in grouped:
+            grouped[row.metric_type] = []
+
+        entry = {"timestamp": row.timestamp.isoformat()}
+        if row.metric_type == "blood_pressure":
+            entry["systolic"] = row.systolic
+            entry["diastolic"] = row.diastolic
+        else:
+            entry["value"] = row.value
+
+        grouped[row.metric_type].append(entry)
+
+    return grouped
 
 
