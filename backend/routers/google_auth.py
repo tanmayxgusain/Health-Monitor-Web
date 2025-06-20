@@ -1,7 +1,7 @@
 # backend/routers/google_auth.py
 
 from datetime import datetime, time, timedelta
-from fastapi import APIRouter, HTTPException, Request, Depends
+from fastapi import APIRouter, HTTPException, Request, Depends, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -14,7 +14,7 @@ from models import User, HealthData
 from urllib.parse import urlencode
 
 from dotenv import load_dotenv
-from typing import Optional
+from typing import Optional, List
 
 load_dotenv()
 
@@ -244,20 +244,22 @@ async def get_health_data(user_email: str,period: Optional[str] = "today", db: A
         raise HTTPException(status_code=400, detail="Google account not linked")
     
 
-    if period == "today":
-        end_time = datetime.utcnow()
-        start_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    elif period == "yesterday":
-        end_time = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        start_time = end_time - timedelta(days=1)
-    else:
-        # fallback to last 24h
-        end_time = datetime.utcnow()
-        start_time = end_time - timedelta(days=1)
+    # if period == "today":
+    #     end_time = datetime.utcnow()
+    #     start_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
+    # elif period == "yesterday":
+    #     end_time = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    #     start_time = end_time - timedelta(days=1)
+    # else:
+    #     # fallback to last 24h
+    #     end_time = datetime.utcnow()
+    #     start_time = end_time - timedelta(days=1)
 
 
 
-    # Time range: last 24 hours
+    # Time range for today
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(days=1)
     start_millis = int(start_time.timestamp() * 1000)
     end_millis = int(end_time.timestamp() * 1000)
 
@@ -280,20 +282,25 @@ async def get_health_data(user_email: str,period: Optional[str] = "today", db: A
             #     raise HTTPException(status_code=401, detail="Invalid or expired token. Please re-authenticate.")
 
             # Retry once if 401
-            if response.status_code == 401 and user.refresh_token:
-                new_tokens = await refresh_access_token(user.refresh_token)
+            # if response.status_code == 401 and user.refresh_token:
+            #     new_tokens = await refresh_access_token(user.refresh_token)
 
-                user.access_token = new_tokens["access_token"]
-                await db.commit()  # Save new access token
+            #     user.access_token = new_tokens["access_token"]
+            #     await db.commit()  # Save new access token
 
-                headers["Authorization"] = f"Bearer {user.access_token}"
-                response = await client.post(
-                    GOOGLE_FIT_API_URL,
-                    headers=headers,
-                    json=build_request_body(data_type, start_millis, end_millis)
-                )
+            #     headers["Authorization"] = f"Bearer {user.access_token}"
+            #     response = await client.post(
+            #         GOOGLE_FIT_API_URL,
+            #         headers=headers,
+            #         json=build_request_body(data_type, start_millis, end_millis)
+            #     )
 
+            # if response.status_code != 200:
+            #     results[key] = []
+            #     continue
             if response.status_code != 200:
+                if response.status_code == 401:
+                    raise HTTPException(status_code=401, detail="Invalid or expired token. Please re-authenticate.")
                 results[key] = []
                 continue
 
@@ -354,46 +361,64 @@ async def get_health_data(user_email: str,period: Optional[str] = "today", db: A
                     )
 
                 db.add(new_entry)
-            await db.commit()
+    await db.commit()
 
     print("Final results to return:", results)
     return results
 
 
 @router.get("/healthdata/history")
-async def get_health_data_history(user_email: str, start_date: str, end_date: str, db: AsyncSession = Depends(get_db)):
+async def get_health_data_history(
+    user_email: str,
+    start_date: str = Query(..., description="YYYY-MM-DD"),
+    end_date: str = Query(..., description="YYYY-MM-DD"),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+
+    # 🔐 Find user by email
     result = await db.execute(select(User).where(User.email == user_email))
     user = result.scalars().first()
+
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found.")
 
-    start_dt = datetime.fromisoformat(start_date)
-    end_dt = datetime.fromisoformat(end_date)
-
+    # 📊 Get health records for the user between dates
     result = await db.execute(
         select(HealthData).where(
             HealthData.user_id == user.id,
             HealthData.timestamp >= start_dt,
-            HealthData.timestamp <= end_dt
+            HealthData.timestamp <= end_dt,
         )
     )
+    records: List[HealthData] = result.scalars().all()
 
-    data = result.scalars().all()
+    heart_rate = []
+    spo2 = []
+    blood_pressure = []
 
-    grouped = {}
-    for row in data:
-        if row.metric_type not in grouped:
-            grouped[row.metric_type] = []
+    for rec in records:
+        ts = int(rec.timestamp.timestamp() * 1000)
 
-        entry = {"timestamp": row.timestamp.isoformat()}
-        if row.metric_type == "blood_pressure":
-            entry["systolic"] = row.systolic
-            entry["diastolic"] = row.diastolic
-        else:
-            entry["value"] = row.value
+        if rec.metric_type == "heart_rate" and rec.value is not None:
+            heart_rate.append({"timestamp": ts, "value": rec.value})
 
-        grouped[row.metric_type].append(entry)
+        elif rec.metric_type == "spo2" and rec.value is not None:
+            spo2.append({"timestamp": ts, "value": rec.value})
 
-    return grouped
+        elif rec.metric_type == "blood_pressure" and rec.systolic and rec.diastolic:
+            blood_pressure.append({
+                "timestamp": ts,
+                "systolic": rec.systolic,
+                "diastolic": rec.diastolic
+            })
 
-
+    return {
+        "heart_rate": heart_rate,
+        "spo2": spo2,
+        "blood_pressure": blood_pressure
+    }

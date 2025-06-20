@@ -14,16 +14,16 @@ import { Link } from 'react-router-dom';
 import MainLayout from "../layouts/MainLayout";
 import HealthChart from "../components/HealthChart";
 
-// const iconMap = {
-//   heart_rate: { icon: <FaHeartbeat />, unit: "bpm", color: "bg-red-500", title: "Heart Rate" },
-//   blood_pressure: { icon: <FaTint />, unit: "mmHg", color: "bg-blue-500", title: "Blood Pressure" },
-//   spo2: { icon: <FaLungs />, unit: "%", color: "bg-green-500", title: "SpO₂" },
-//   sleep: { icon: <FaBed />, unit: "hrs", color: "bg-indigo-500", title: "Sleep" },
-//   activity: { icon: <FaShoePrints />, unit: "", color: "bg-yellow-600", title: "Activity" },
-//   steps: { icon: <FaShoePrints />, unit: "steps", color: "bg-orange-500", title: "Steps" },
-//   calories: { icon: <FaFireAlt />, unit: "kcal", color: "bg-pink-600", title: "Calories" },
-//   distance: { icon: <FaShoePrints />, unit: "km", color: "bg-purple-600", title: "Distance" },
-// };
+const iconMap = {
+  heart_rate: { icon: <FaHeartbeat />, unit: "bpm", color: "bg-red-500", title: "Heart Rate" },
+  blood_pressure: { icon: <FaTint />, unit: "mmHg", color: "bg-blue-500", title: "Blood Pressure" },
+  spo2: { icon: <FaLungs />, unit: "%", color: "bg-green-500", title: "SpO₂" },
+  sleep: { icon: <FaBed />, unit: "hrs", color: "bg-indigo-500", title: "Sleep" },
+  activity: { icon: <FaShoePrints />, unit: "", color: "bg-yellow-600", title: "Activity" },
+  steps: { icon: <FaShoePrints />, unit: "steps", color: "bg-orange-500", title: "Steps" },
+  calories: { icon: <FaFireAlt />, unit: "kcal", color: "bg-pink-600", title: "Calories" },
+  distance: { icon: <FaShoePrints />, unit: "km", color: "bg-purple-600", title: "Distance" },
+};
 
 const Dashboard = () => {
   const [period, setPeriod] = useState("Today");
@@ -40,11 +40,35 @@ const Dashboard = () => {
   const [spo2Data, setSpo2Data] = useState("--");
 
   // const [latest, setLatest] = useState({});
-  // const [history, setHistory] = useState({
-  //   heart_rate: [],
-  //   blood_pressure: [],
-  //   spo2: [],
-  // });
+  const [history, setHistory] = useState({
+    heart_rate: [],
+    blood_pressure: [],
+    spo2: [],
+  });
+
+  const [averageMetrics, setAverageMetrics] = useState({
+    heart_rate: "--",
+    spo2: "--",
+    blood_pressure: "--",
+  });
+
+  const getAverage = (data) => {
+    if (!data || data.length === 0) return "--";
+    const sum = data.reduce((acc, val) => acc + (val.value || 0), 0);
+    return Math.round(sum / data.length);
+  };
+
+  const getAverageBP = (data) => {
+    if (!data || data.length === 0) return "--";
+    const systolic = Math.round(
+      data.reduce((acc, val) => acc + (val.systolic || 0), 0) / data.length
+    );
+    const diastolic = Math.round(
+      data.reduce((acc, val) => acc + (val.diastolic || 0), 0) / data.length
+    );
+    return `${systolic}/${diastolic}`;
+  };
+
 
   // const [error, setError] = useState(null);
 
@@ -73,111 +97,145 @@ const Dashboard = () => {
   // }, []);
 
 
+  // useEffect(() => {
+
+  //   const fetchHealthData = async () => {
+  //     if (!email) return;
+  //     let heartRate = "--";
+  //     let spo2 = "--";
+  //     let bp = "--";
+
+
+  //     try {
+  //       if (period === "Today") {
+  //         const res = await axios.get("http://localhost:8000/google/health-data", {
+  //           params: { user_email: email, period: "today" },
+  //         });
+
+  //         const data = res.data;
+  //         heartRate = data.heart_rate?.at(-1)?.value || "--";
+  //         spo2 = data.spo2?.at(-1)?.value || "--";
+  //         const bpData = data.blood_pressure?.at(-1);
+  //         bp = bpData ? `${bpData.systolic}/${bpData.diastolic}` : "--";
+
+  //       } else {
+  //         // History from DB
+  //         let startDate, endDate;
+  //         const today = new Date();
+
+  //         if (period === "Yesterday") {
+  //           const y = new Date(today.setDate(today.getDate() - 1));
+  //           startDate = new Date(y.setHours(0, 0, 0, 0)).toISOString().split("T")[0];
+  //           endDate = new Date(y.setHours(23, 59, 59, 999)).toISOString().split("T")[0];
+  //         } else if (period === "Custom") {
+  //           if (!customStart || !customEnd) return;
+  //           startDate = customStart;
+  //           endDate = customEnd;
+  //         }
+
+  //         const res = await axios.get("http://localhost:8000/healthdata/history", {
+  //           params: {
+  //             user_email: email,
+  //             start_date: startDate,
+  //             end_date: endDate,
+  //           },
+  //         });
+
+  //         const data = res.data;
+  //         heartRate = data.heart_rate?.at(-1)?.value || "--";
+  //         spo2 = data.spo2?.at(-1)?.value || "--";
+  //         const bpData = data.blood_pressure?.at(-1);
+  //         bp = bpData ? `${bpData.systolic}/${bpData.diastolic}` : "--";
+  //       }
+
+  //       // Update cards
+  //       setHeartRateData(heartRate);
+  //       setSpo2Data(spo2);
+  //       setBpData(bp);
+
+  //     } catch (err) {
+  //       console.error("Error fetching health data:", err);
+  //     }
+  //   };
+
+  //   fetchHealthData();
+  // }, [period, customStart, customEnd]);
+
   useEffect(() => {
-
-    const fetchData = async () => {
+    const fetchHealthData = async () => {
       if (!email) return;
-      let heartRate = "--";
-      let spo2 = "--";
-      let bp = "--";
-      // let range;
+      let startDate;
 
-      // if (period === "Custom") {
-      //   if (!customStart || !customEnd) return;
-      //   range = {
-      //     start_date: customStart,
-      //     end_date: customEnd,
-      //   };
-      // } else {
-      //   range = { period: period.toLowerCase() };
-      // }
+      // Determine period
+      const today = new Date();
+      if (period === "Today") {
+        startDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
 
-      try {
-        if (period === "Today") {
+        try {
           const res = await axios.get("http://localhost:8000/google/health-data", {
             params: { user_email: email, period: "today" },
           });
 
           const data = res.data;
-          heartRate = data.heart_rate?.at(-1)?.value || "--";
-          spo2 = data.spo2?.at(-1)?.value || "--";
-          const bpData = data.blood_pressure?.at(-1);
-          bp = bpData ? `${bpData.systolic}/${bpData.diastolic}` : "--";
 
-        } else {
-          // History from DB
-          let startDate, endDate;
-          const today = new Date();
+          // Set chart data
+          setHistory({
+            heart_rate: data.heart_rate || [],
+            spo2: data.spo2 || [],
+            blood_pressure: data.blood_pressure || [],
+          });
 
-          if (period === "Yesterday") {
-            const y = new Date(today.setDate(today.getDate() - 1));
-            startDate = new Date(y.setHours(0, 0, 0, 0)).toISOString().split("T")[0];
-            endDate = new Date(y.setHours(23, 59, 59, 999)).toISOString().split("T")[0];
-          } else if (period === "Custom") {
-            if (!customStart || !customEnd) return;
-            startDate = customStart;
-            endDate = customEnd;
-          }
+          // Compute average
 
+          setAverageMetrics({
+            heart_rate: getAverage(data.heart_rate),
+            spo2: getAverage(data.spo2),
+            blood_pressure: getAverageBP(data.blood_pressure),
+          });
+        } catch (err) {
+          console.error("Google Fit fetch error:", err);
+        }
+
+      } else {
+        if (period === "Yesterday") {
+          const y = new Date(today.setDate(today.getDate() - 1));
+          startDate = new Date(y.setHours(0, 0, 0, 0)).toISOString().split("T")[0];
+        } else if (period === "Custom") {
+          if (!customStart) return;
+          startDate = customStart;
+        }
+
+        try {
           const res = await axios.get("http://localhost:8000/healthdata/history", {
             params: {
               user_email: email,
               start_date: startDate,
-              end_date: endDate,
+              end_date: startDate, // single date for 1-day data
             },
           });
 
           const data = res.data;
-          heartRate = data.heart_rate?.at(-1)?.value || "--";
-          spo2 = data.spo2?.at(-1)?.value || "--";
-          const bpData = data.blood_pressure?.at(-1);
-          bp = bpData ? `${bpData.systolic}/${bpData.diastolic}` : "--";
+
+          setHistory({
+            heart_rate: data.heart_rate || [],
+            spo2: data.spo2 || [],
+            blood_pressure: data.blood_pressure || [],
+          });
+
+          setAverageMetrics({
+            heart_rate: getAverage(data.heart_rate),
+            spo2: getAverage(data.spo2),
+            blood_pressure: getAverageBP(data.blood_pressure),
+          });
+        } catch (err) {
+          console.error("History DB fetch error:", err);
         }
-
-        // Update cards
-        setHeartRateData(heartRate);
-        setSpo2Data(spo2);
-        setBpData(bp);
-
-      } catch (err) {
-        console.error("Error fetching health data:", err);
       }
     };
 
     fetchHealthData();
-  }, [period, customStart, customEnd]);
+  }, [period, customStart]);
 
- 
-
-
-  // useEffect(() => {
-  //   const fetchHealthData = async () => {
-  //     const email = localStorage.getItem("user_email");
-  //     try {
-  //       const res = await api.get(`/health-data`, {
-  //         params: { user_email: email },
-  //       });
-
-  //       const data = res.data;
-
-  //       // Get latest readings
-  //       const latestHeart = data.heart_rate?.[data.heart_rate.length - 1]?.value || "--";
-  //       const latestSpO2 = data.spo2?.[data.spo2.length - 1]?.value || "--";
-  //       const latestBP = data.blood_pressure?.[data.blood_pressure.length - 1] || null;
-
-  //       setHeartRateData(latestHeart);
-  //       setSpo2Data(latestSpO2);
-  //       setBpData(latestBP ? `${latestBP.systolic}/${latestBP.diastolic}` : "--");
-
-
-
-  //     } catch (error) {
-  //       console.error("Failed to fetch live health data:", error);
-  //     }
-  //   };
-
-  //   fetchHealthData();
-  // }, []);
 
 
 
@@ -192,7 +250,7 @@ const Dashboard = () => {
         <p className="text-sm text-gray-500">Welcome, {email}</p>
       </div>
 
-      <h1 className="text-2xl font-bold text-gray-800">Health Dashboard</h1>
+      <h2 className="text-2xl font-bold text-gray-800">Health Dashboard</h2>
 
 
 
@@ -201,29 +259,53 @@ const Dashboard = () => {
       {period === "Custom" && (
         <div className="flex flex-col sm:flex-row items-center gap-4">
           <div>
-            <label className="block text-sm">Start Date:</label>
+            <label className="block text-sm">Select Date:</label>
             <input
               type="date"
-              onChange={(e) => {
-                setCustomStart(e.target.value);
-                setCustomEnd(""); // Reset end date if start changes
-              }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm">End Date:</label>
-            <input
-              type="date"
-              value={customEnd || ""}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              min={customStart} // Prevent choosing an earlier date
-              disabled={!customStart}
+              value={customStart || ""}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="border rounded px-2 py-1"
+
             />
           </div>
         </div>
       )}
 
+      {/* Health Cards */}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {Object.entries(averageMetrics).map(([key, value]) => {
+          const meta = iconMap[key];
+          return (
+            <HealthCard
+              key={key}
+              title={meta.title}
+              value={value}
+              unit={meta.unit}
+              icon={meta.icon}
+              color={meta.color}
+            />
+          );
+        })}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
+        <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
+        <LineChartPanel title="Blood Pressure Trend" data={history.blood_pressure} unit="mmHg" />
+      </div>
+
+      <div className="min-h-[40px] text-center">
+        <p className="text-sm text-gray-500 mt-2">Last updated at: {new Date().toLocaleTimeString()}</p>
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;
+
+/* <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         <HealthCard
           title="Heart Rate"
           value={heartRateData}
@@ -254,7 +336,7 @@ const Dashboard = () => {
       </div>
 
 
-    </div>
+    </div >
 
   );
 };
@@ -262,4 +344,4 @@ const Dashboard = () => {
 
 
 
-export default Dashboard;
+export default Dashboard; */
