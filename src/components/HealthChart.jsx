@@ -28,25 +28,42 @@ import {
 //   );
 // };
 
-const HealthChart = ({ data, color = "#ef4444", metric = "Heart Rate" }) => {
-  const hasData = data && data.length > 0;
+const HealthChart = ({ data = [], color = "#ef4444", metric = "Heart Rate" }) => {
+  // Check if we have valid data
+  const hasData = Array.isArray(data) && data.length > 0;
+
+  // Add dummy point to force axes/grid even if no real data
+  const chartData = hasData ? data : [{ timestamp: "", value: 0 }];
 
   return (
-    <div className="w-full h-64 bg-white rounded-xl shadow p-4">
-      <h3 className="text-lg font-semibold mb-2 text-gray-700">Daily {metric} Chart</h3>
-      <ResponsiveContainer width="100%" height="85%">
-        <LineChart data={hasData ? data : [{ timestamp: "", value: 0 }]}>
+    <div className="w-full min-h-[250px] bg-white rounded-xl shadow p-4">
+      <h3 className="text-lg font-semibold mb-2 text-gray-700">
+        Daily {metric} Chart
+      </h3>
+
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="timestamp" />
           <YAxis />
           <Tooltip />
-          {hasData ? (
-            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} />
-          ) : null}
+          {hasData && (
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke={color}
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              isAnimationActive={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
+
       {!hasData && (
-        <p className="text-center text-sm text-gray-500">No data available</p>
+        <div className="text-center text-sm text-gray-400 mt-2">
+          No data available
+        </div>
       )}
     </div>
   );
