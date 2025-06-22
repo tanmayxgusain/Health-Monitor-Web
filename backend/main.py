@@ -37,8 +37,8 @@ def root():
 # Create tables on startup
 # Base.metadata.create_all(bind=engine)
 
-# ✅ Async table creation
-@app.on_event("startup")
-async def on_startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+# # ✅ Async table creation
+# @app.on_event("startup")
+# async def on_startup():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)

@@ -7,9 +7,9 @@ from sqlalchemy.future import select
 from database import async_session  # Make sure this is imported
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-from sqlalchemy.ext.declarative import declarative_base
 
-Base = declarative_base()
+
+
 
 
 
@@ -20,7 +20,7 @@ class User(Base):
     name = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     profile_pic = Column(String, nullable=True)
-    password = Column(String, nullable=False)
+    password = Column(String, nullable=True)
 
     # ➕ Add these new columns:
     access_token = Column(String, nullable=True)
