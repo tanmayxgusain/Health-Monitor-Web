@@ -244,16 +244,7 @@ async def get_health_data(user_email: str,period: Optional[str] = "today", db: A
         raise HTTPException(status_code=400, detail="Google account not linked")
     
 
-    # if period == "today":
-    #     end_time = datetime.utcnow()
-    #     start_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    # elif period == "yesterday":
-    #     end_time = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    #     start_time = end_time - timedelta(days=1)
-    # else:
-    #     # fallback to last 24h
-    #     end_time = datetime.utcnow()
-    #     start_time = end_time - timedelta(days=1)
+    
 
 
 
