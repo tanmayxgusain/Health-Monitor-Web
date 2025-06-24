@@ -9,6 +9,7 @@ from routers import google_auth
 
 from routers.google_health import router as google_health_router
 
+from routers.google_health import sync_google_fit_data_for_all_users
 
 app = FastAPI()
 
@@ -42,3 +43,7 @@ def root():
 # async def on_startup():
 #     async with engine.begin() as conn:
 #         await conn.run_sync(Base.metadata.create_all)
+
+@app.on_event("startup")
+async def startup_event():
+    await sync_google_fit_data_for_all_users()

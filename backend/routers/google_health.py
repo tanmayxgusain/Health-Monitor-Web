@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, Depends
+from fastapi import APIRouter, Request, Depends, HTTPException
 from datetime import datetime, timedelta
 import httpx
 from models import User, HealthData
@@ -6,8 +6,10 @@ import requests
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database import get_db
+from typing import Optional
 import json
-
+from google_auth import GOOGLE_FIT_API_URL, DATA_TYPES, build_request_body  # Adjust if needed
+from sqlalchemy import and_
 router = APIRouter()
 
 @router.get("/health-data")
