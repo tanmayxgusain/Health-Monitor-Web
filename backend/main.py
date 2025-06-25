@@ -1,15 +1,14 @@
 from fastapi import FastAPI
-from routers import auth, healthdata
-from database import Base, engine
-import models
 from fastapi.middleware.cors import CORSMiddleware
-from routers import healthdata
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from routers import google_auth 
-
+from database import Base, engine, async_session
+from models import User
+from routers import auth, healthdata, google_auth
 from routers.google_health import router as google_health_router
+from services.google_sync import sync_google_fit_data
 
-from routers.google_health import sync_google_fit_data_for_all_users
 
 app = FastAPI()
 
@@ -46,4 +45,13 @@ def root():
 
 @app.on_event("startup")
 async def startup_event():
-    await sync_google_fit_data_for_all_users()
+    async with async_session() as db:
+        result = await db.execute(select(User))
+        users = result.scalars().all()
+        for user in users:
+            if user.access_token:
+                try:
+                    await sync_google_fit_data(user, db)
+                    print(f"✅ Synced data for {user.email}")
+                except Exception as e:
+                    print(f"❌ Failed to sync {user.email}: {e}")

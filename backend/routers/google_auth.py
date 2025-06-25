@@ -16,6 +16,8 @@ from urllib.parse import urlencode
 from dotenv import load_dotenv
 from typing import Optional, List
 
+from services.google_sync import sync_google_fit_data
+
 load_dotenv()
 
 router = APIRouter()
@@ -422,3 +424,16 @@ async def get_health_data_history(
         "spo2": spo2,
         "blood_pressure": blood_pressure
     }
+
+
+
+@router.post("/google/sync")
+async def sync_now(user_email: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == user_email))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await sync_google_fit_data(user, db)
+    return {"detail": "Synced successfully"}

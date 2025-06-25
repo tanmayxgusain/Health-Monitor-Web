@@ -70,6 +70,19 @@ const Dashboard = () => {
   };
 
 
+  const handleSync = async () => {
+  try {
+    await axios.post("http://localhost:8000/google/sync", {
+      user_email: email
+    });
+    alert("Synced successfully");
+    window.location.reload();  // Optional: refresh dashboard
+  } catch (err) {
+    alert("Sync failed");
+    console.error(err);
+  }
+};
+
   // const [error, setError] = useState(null);
 
 
@@ -251,6 +264,8 @@ const Dashboard = () => {
       </div>
 
       <h2 className="text-2xl font-bold text-gray-800">Health Dashboard</h2>
+
+      <button onClick={handleSync} className="text-sm px-3 py-1 bg-blue-500 text-white rounded">Sync Now</button>
 
 
 
