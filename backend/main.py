@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import Base, engine, async_session
 from models import User
 from routers import auth, healthdata, google_auth
+from routers.google_auth import router as google_auth_router
 from routers.google_health import router as google_health_router
 from services.google_sync import sync_google_fit_data
 

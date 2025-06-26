@@ -71,17 +71,17 @@ const Dashboard = () => {
 
 
   const handleSync = async () => {
-  try {
-    await axios.post("http://localhost:8000/google/sync", {
-      user_email: email
-    });
-    alert("Synced successfully");
-    window.location.reload();  // Optional: refresh dashboard
-  } catch (err) {
-    alert("Sync failed");
-    console.error(err);
-  }
-};
+    try {
+      await axios.post("http://localhost:8000/google/sync", {
+        user_email: email
+      });
+      alert("Synced successfully");
+      window.location.reload();  // Optional: refresh dashboard
+    } catch (err) {
+      alert("Sync failed");
+      console.error(err);
+    }
+  };
 
   // const [error, setError] = useState(null);
 
@@ -177,19 +177,38 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchHealthData = async () => {
       if (!email) return;
-      let startDate;
+
 
       // Determine period
       const today = new Date();
+      let startDate;
+      setHistory({
+        heart_rate: [],
+        spo2: [],
+        blood_pressure: [],
+      });
+
+      setAverageMetrics({
+        heart_rate: "--",
+        spo2: "--",
+        blood_pressure: "--",
+      });
+
       if (period === "Today") {
         startDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
 
         try {
           const res = await axios.get("http://localhost:8000/google/health-data", {
-            params: { user_email: email, period: "today" },
+            params: { user_email: email },
           });
 
           const data = res.data;
+          console.log("Fetched history data:", data);
+          console.log("[🚦 Dashboard] period:", period, "→ startDate:", startDate);
+
+
+
+
 
           // Set chart data
           setHistory({
@@ -201,9 +220,9 @@ const Dashboard = () => {
           // Compute average
 
           setAverageMetrics({
-            heart_rate: getAverage(data.heart_rate),
-            spo2: getAverage(data.spo2),
-            blood_pressure: getAverageBP(data.blood_pressure),
+            heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
+            spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
+            blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
           });
         } catch (err) {
           console.error("Google Fit fetch error:", err);
@@ -211,10 +230,17 @@ const Dashboard = () => {
 
       } else {
         if (period === "Yesterday") {
-          const y = new Date(today.setDate(today.getDate() - 1));
-          startDate = new Date(y.setHours(0, 0, 0, 0)).toISOString().split("T")[0];
+          // const y = new Date();
+          // y.setDate(y.getDate() - 1);
+          // startDate = y.toISOString().split("T")[0];
+          const y = new Date();
+          y.setDate(y.getDate() - 1);
+          startDate = y.toISOString().split("T")[0];
+
+
         } else if (period === "Custom") {
           if (!customStart) return;
+          // startDate = new Date(customStart).toISOString().split("T")[0];
           startDate = customStart;
         }
 
@@ -228,6 +254,10 @@ const Dashboard = () => {
           });
 
           const data = res.data;
+          console.log("Fetched history data:", data);
+          console.log("[🚦 Dashboard] period:", period, "→ startDate:", startDate);
+
+
 
           setHistory({
             heart_rate: data.heart_rate || [],
@@ -236,9 +266,9 @@ const Dashboard = () => {
           });
 
           setAverageMetrics({
-            heart_rate: getAverage(data.heart_rate),
-            spo2: getAverage(data.spo2),
-            blood_pressure: getAverageBP(data.blood_pressure),
+            heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
+            spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
+            blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
           });
         } catch (err) {
           console.error("History DB fetch error:", err);

@@ -1,6 +1,6 @@
 # backend/services/google_sync.py
 from models import HealthData, User
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import httpx
 from routers.google_auth import DATA_TYPES, GOOGLE_FIT_API_URL, build_request_body
 from sqlalchemy.future import select
@@ -31,7 +31,8 @@ async def sync_google_fit_data(user: User, db):
                 for dataset in bucket.get("dataset", []):
                     for point in dataset.get("point", []):
                         ts = int(point["startTimeNanos"]) // 1_000_000
-                        ts_dt = datetime.fromtimestamp(ts / 1000)
+                        ts_dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
+
 
                         if key == "blood_pressure":
                             systolic = diastolic = None

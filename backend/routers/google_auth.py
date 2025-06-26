@@ -16,7 +16,6 @@ from urllib.parse import urlencode
 from dotenv import load_dotenv
 from typing import Optional, List
 
-from services.google_sync import sync_google_fit_data
 
 load_dotenv()
 
@@ -68,24 +67,24 @@ async def login():
     })
     return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
 
-@router.get("/auth/callback")
-async def auth_callback(code: str):
-    token_data = {
-        "code": code,
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "redirect_uri": REDIRECT_URI,
-        "grant_type": "authorization_code",
-    }
-    # response = requests.post(token_url, data=data)
-    async with httpx.AsyncClient() as client:
-        response = await client.post(GOOGLE_TOKEN_URL, data=token_data)
-        token_info = response.json()
+# @router.get("/auth/callback")
+# async def auth_callback(code: str):
+#     token_data = {
+#         "code": code,
+#         "client_id": GOOGLE_CLIENT_ID,
+#         "client_secret": GOOGLE_CLIENT_SECRET,
+#         "redirect_uri": REDIRECT_URI,
+#         "grant_type": "authorization_code",
+#     }
+#     # response = requests.post(token_url, data=data)
+#     async with httpx.AsyncClient() as client:
+#         response = await client.post(GOOGLE_TOKEN_URL, data=token_data)
+#         token_info = response.json()
 
-    if "access_token" not in token_info:
-        raise HTTPException(status_code=401, detail="Token exchange failed")
+#     if "access_token" not in token_info:
+#         raise HTTPException(status_code=401, detail="Token exchange failed")
     
-    return {"access_token": token_info.get("access_token"), "refresh_token": token_info.get("refresh_token")}
+#     return {"access_token": token_info.get("access_token"), "refresh_token": token_info.get("refresh_token")}
 
 # @router.get("/auth/google/login")
 # def google_login():
@@ -236,204 +235,204 @@ def build_request_body(data_type, start_time_millis, end_time_millis):
     }
 
 
-@router.get("/google/health-data")
-async def get_health_data(user_email: str,period: Optional[str] = "today", db: AsyncSession = Depends(get_db)):
-    # user = db.query(User).filter(User.email == user_email).first()
-    result = await db.execute(select(User).where(User.email == user_email))
-    user = result.scalars().first()
+# @router.get("/google/health-data")
+# async def get_health_data(user_email: str,period: Optional[str] = "today", db: AsyncSession = Depends(get_db)):
+#     # user = db.query(User).filter(User.email == user_email).first()
+#     result = await db.execute(select(User).where(User.email == user_email))
+#     user = result.scalars().first()
 
-    if not user or not user.access_token:
-        raise HTTPException(status_code=400, detail="Google account not linked")
+#     if not user or not user.access_token:
+#         raise HTTPException(status_code=400, detail="Google account not linked")
     
 
-    # if period == "today":
-    #     end_time = datetime.utcnow()
-    #     start_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    # elif period == "yesterday":
-    #     end_time = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    #     start_time = end_time - timedelta(days=1)
-    # else:
-    #     # fallback to last 24h
-    #     end_time = datetime.utcnow()
-    #     start_time = end_time - timedelta(days=1)
+#     # if period == "today":
+#     #     end_time = datetime.utcnow()
+#     #     start_time = end_time.replace(hour=0, minute=0, second=0, microsecond=0)
+#     # elif period == "yesterday":
+#     #     end_time = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+#     #     start_time = end_time - timedelta(days=1)
+#     # else:
+#     #     # fallback to last 24h
+#     #     end_time = datetime.utcnow()
+#     #     start_time = end_time - timedelta(days=1)
 
 
 
-    # Time range for today
-    end_time = datetime.utcnow()
-    start_time = end_time - timedelta(days=1)
-    start_millis = int(start_time.timestamp() * 1000)
-    end_millis = int(end_time.timestamp() * 1000)
+#     # Time range for today
+#     end_time = datetime.utcnow()
+#     start_time = end_time - timedelta(days=1)
+#     start_millis = int(start_time.timestamp() * 1000)
+#     end_millis = int(end_time.timestamp() * 1000)
 
-    headers = {
-        "Authorization": f"Bearer {user.access_token}"
-    }
+#     headers = {
+#         "Authorization": f"Bearer {user.access_token}"
+#     }
 
-    results = {}
+#     results = {}
 
-    async with httpx.AsyncClient() as client:
-        for key, data_type in DATA_TYPES.items():
-            extracted = []
-            response = await client.post(
-                GOOGLE_FIT_API_URL,
-                headers=headers,
-                json=build_request_body(data_type, start_millis, end_millis)
-            )
+#     async with httpx.AsyncClient() as client:
+#         for key, data_type in DATA_TYPES.items():
+#             extracted = []
+#             response = await client.post(
+#                 GOOGLE_FIT_API_URL,
+#                 headers=headers,
+#                 json=build_request_body(data_type, start_millis, end_millis)
+#             )
 
-            # if response.status_code == 401:
-            #     raise HTTPException(status_code=401, detail="Invalid or expired token. Please re-authenticate.")
+#             # if response.status_code == 401:
+#             #     raise HTTPException(status_code=401, detail="Invalid or expired token. Please re-authenticate.")
 
-            # Retry once if 401
-            # if response.status_code == 401 and user.refresh_token:
-            #     new_tokens = await refresh_access_token(user.refresh_token)
+#             # Retry once if 401
+#             # if response.status_code == 401 and user.refresh_token:
+#             #     new_tokens = await refresh_access_token(user.refresh_token)
 
-            #     user.access_token = new_tokens["access_token"]
-            #     await db.commit()  # Save new access token
+#             #     user.access_token = new_tokens["access_token"]
+#             #     await db.commit()  # Save new access token
 
-            #     headers["Authorization"] = f"Bearer {user.access_token}"
-            #     response = await client.post(
-            #         GOOGLE_FIT_API_URL,
-            #         headers=headers,
-            #         json=build_request_body(data_type, start_millis, end_millis)
-            #     )
+#             #     headers["Authorization"] = f"Bearer {user.access_token}"
+#             #     response = await client.post(
+#             #         GOOGLE_FIT_API_URL,
+#             #         headers=headers,
+#             #         json=build_request_body(data_type, start_millis, end_millis)
+#             #     )
 
-            # if response.status_code != 200:
-            #     results[key] = []
-            #     continue
-            if response.status_code != 200:
-                if response.status_code == 401:
-                    raise HTTPException(status_code=401, detail="Invalid or expired token. Please re-authenticate.")
-                results[key] = []
-                continue
-
-
-            buckets = response.json().get("bucket", [])
-
-            for bucket in buckets:
-                for dataset in bucket.get("dataset", []):
-                    points = dataset.get("point", [])
-                    if not points:
-                        continue  # skip empty dataset
-
-                    for point in points:
-                        ts = int(point["startTimeNanos"]) // 1_000_000
-
-                        if data_type == "com.google.blood_pressure":
-                            systolic = diastolic = None
-                            for val in point["value"]:
-                                map_val = val.get("mapVal", [])
-                                for entry in map_val:
-                                    if entry["key"] == "systolic":
-                                        systolic = entry["value"].get("fpVal")
-                                    elif entry["key"] == "diastolic":
-                                        diastolic = entry["value"].get("fpVal")
-                            if systolic is not None and diastolic is not None:
-                                extracted.append({
-                                    "timestamp": ts,
-                                    "systolic": int(systolic),
-                                    "diastolic": int(diastolic)
-                                })
-                        else:
-                            value = point["value"][0].get("fpVal")
-                            if value is not None:
-                                extracted.append({
-                                    "timestamp": ts,
-                                    "value": int(value)
-                                })
-
-            # results[key] = extracted
-            for entry in extracted:
-                ts = datetime.fromtimestamp(entry["timestamp"] / 1000)
-
-                if key == "blood_pressure":
-                    new_entry = HealthData(
-                        user_id=user.id,
-                        metric_type=key,
-                        systolic=entry["systolic"],
-                        diastolic=entry["diastolic"],
-                        timestamp=ts
-                    )
-
-                else:
-                    new_entry = HealthData(
-                        user_id=user.id,
-                        metric_type=key,
-                        value=entry["value"],
-                        timestamp=ts
-                    )
-
-                db.add(new_entry)
-    await db.commit()
-
-    print("Final results to return:", results)
-    return results
+#             # if response.status_code != 200:
+#             #     results[key] = []
+#             #     continue
+#             if response.status_code != 200:
+#                 if response.status_code == 401:
+#                     raise HTTPException(status_code=401, detail="Invalid or expired token. Please re-authenticate.")
+#                 results[key] = []
+#                 continue
 
 
-@router.get("/healthdata/history")
-async def get_health_data_history(
-    user_email: str,
-    start_date: str = Query(..., description="YYYY-MM-DD"),
-    end_date: str = Query(..., description="YYYY-MM-DD"),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
-        end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+#             buckets = response.json().get("bucket", [])
 
-    # 🔐 Find user by email
-    result = await db.execute(select(User).where(User.email == user_email))
-    user = result.scalars().first()
+#             for bucket in buckets:
+#                 for dataset in bucket.get("dataset", []):
+#                     points = dataset.get("point", [])
+#                     if not points:
+#                         continue  # skip empty dataset
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
+#                     for point in points:
+#                         ts = int(point["startTimeNanos"]) // 1_000_000
 
-    # 📊 Get health records for the user between dates
-    result = await db.execute(
-        select(HealthData).where(
-            HealthData.user_id == user.id,
-            HealthData.timestamp >= start_dt,
-            HealthData.timestamp <= end_dt,
-        )
-    )
-    records: List[HealthData] = result.scalars().all()
+#                         if data_type == "com.google.blood_pressure":
+#                             systolic = diastolic = None
+#                             for val in point["value"]:
+#                                 map_val = val.get("mapVal", [])
+#                                 for entry in map_val:
+#                                     if entry["key"] == "systolic":
+#                                         systolic = entry["value"].get("fpVal")
+#                                     elif entry["key"] == "diastolic":
+#                                         diastolic = entry["value"].get("fpVal")
+#                             if systolic is not None and diastolic is not None:
+#                                 extracted.append({
+#                                     "timestamp": ts,
+#                                     "systolic": int(systolic),
+#                                     "diastolic": int(diastolic)
+#                                 })
+#                         else:
+#                             value = point["value"][0].get("fpVal")
+#                             if value is not None:
+#                                 extracted.append({
+#                                     "timestamp": ts,
+#                                     "value": int(value)
+#                                 })
 
-    heart_rate = []
-    spo2 = []
-    blood_pressure = []
+#             # results[key] = extracted
+#             for entry in extracted:
+#                 ts = datetime.fromtimestamp(entry["timestamp"] / 1000)
 
-    for rec in records:
-        ts = int(rec.timestamp.timestamp() * 1000)
+#                 if key == "blood_pressure":
+#                     new_entry = HealthData(
+#                         user_id=user.id,
+#                         metric_type=key,
+#                         systolic=entry["systolic"],
+#                         diastolic=entry["diastolic"],
+#                         timestamp=ts
+#                     )
 
-        if rec.metric_type == "heart_rate" and rec.value is not None:
-            heart_rate.append({"timestamp": ts, "value": rec.value})
+#                 else:
+#                     new_entry = HealthData(
+#                         user_id=user.id,
+#                         metric_type=key,
+#                         value=entry["value"],
+#                         timestamp=ts
+#                     )
 
-        elif rec.metric_type == "spo2" and rec.value is not None:
-            spo2.append({"timestamp": ts, "value": rec.value})
+#                 db.add(new_entry)
+#     await db.commit()
 
-        elif rec.metric_type == "blood_pressure" and rec.systolic and rec.diastolic:
-            blood_pressure.append({
-                "timestamp": ts,
-                "systolic": rec.systolic,
-                "diastolic": rec.diastolic
-            })
-
-    return {
-        "heart_rate": heart_rate,
-        "spo2": spo2,
-        "blood_pressure": blood_pressure
-    }
+#     print("Final results to return:", results)
+#     return results
 
 
+# @router.get("/healthdata/history")
+# async def get_health_data_history(
+#     user_email: str,
+#     start_date: str = Query(..., description="YYYY-MM-DD"),
+#     end_date: str = Query(..., description="YYYY-MM-DD"),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     try:
+#         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+#         end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+#     except ValueError:
+#         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
 
-@router.post("/google/sync")
-async def sync_now(user_email: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == user_email))
-    user = result.scalars().first()
+#     # 🔐 Find user by email
+#     result = await db.execute(select(User).where(User.email == user_email))
+#     user = result.scalars().first()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found.")
 
-    await sync_google_fit_data(user, db)
-    return {"detail": "Synced successfully"}
+#     # 📊 Get health records for the user between dates
+#     result = await db.execute(
+#         select(HealthData).where(
+#             HealthData.user_id == user.id,
+#             HealthData.timestamp >= start_dt,
+#             HealthData.timestamp <= end_dt,
+#         )
+#     )
+#     records: List[HealthData] = result.scalars().all()
+
+#     heart_rate = []
+#     spo2 = []
+#     blood_pressure = []
+
+#     for rec in records:
+#         ts = int(rec.timestamp.timestamp() * 1000)
+
+#         if rec.metric_type == "heart_rate" and rec.value is not None:
+#             heart_rate.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "spo2" and rec.value is not None:
+#             spo2.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "blood_pressure" and rec.systolic and rec.diastolic:
+#             blood_pressure.append({
+#                 "timestamp": ts,
+#                 "systolic": rec.systolic,
+#                 "diastolic": rec.diastolic
+#             })
+
+#     return {
+#         "heart_rate": heart_rate,
+#         "spo2": spo2,
+#         "blood_pressure": blood_pressure
+#     }
+
+
+
+# @router.post("/google/sync")
+# async def sync_now(user_email: str, db: AsyncSession = Depends(get_db)):
+#     result = await db.execute(select(User).where(User.email == user_email))
+#     user = result.scalars().first()
+
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     await sync_google_fit_data(user, db)
+#     return {"detail": "Synced successfully"}
