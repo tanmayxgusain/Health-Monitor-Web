@@ -54,12 +54,15 @@ const Dashboard = () => {
 
   const getAverage = (data) => {
     if (!data || data.length === 0) return "--";
+    console.log("📈 Computing avg from:", data);
+
     const sum = data.reduce((acc, val) => acc + (val.value || 0), 0);
     return Math.round(sum / data.length);
   };
 
   const getAverageBP = (data) => {
     if (!data || data.length === 0) return "--";
+    console.log("📊 Raw BP:", data);
     const systolic = Math.round(
       data.reduce((acc, val) => acc + (val.systolic || 0), 0) / data.length
     );
@@ -71,17 +74,19 @@ const Dashboard = () => {
 
 
   const handleSync = async () => {
-    try {
-      await axios.post("http://localhost:8000/google/sync", {
-        user_email: email
-      });
-      alert("Synced successfully");
-      window.location.reload();  // Optional: refresh dashboard
-    } catch (err) {
-      alert("Sync failed");
-      console.error(err);
-    }
-  };
+  try {
+    await axios.post("http://localhost:8000/google/sync", {
+      user_email: email,
+      days_back: 7   // or 30, or whatever you want
+    });
+    alert("Synced successfully");
+    window.location.reload();
+  } catch (err) {
+    alert("Sync failed");
+    console.error(err);
+  }
+};
+
 
   // const [error, setError] = useState(null);
 
@@ -218,12 +223,14 @@ const Dashboard = () => {
           });
 
           // Compute average
-
+          
           setAverageMetrics({
             heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
             spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
             blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
           });
+          console.log("🔢 Averages computed for", period, averageMetrics);
+
         } catch (err) {
           console.error("Google Fit fetch error:", err);
         }
@@ -323,7 +330,8 @@ const Dashboard = () => {
           const meta = iconMap[key];
           return (
             <HealthCard
-              key={key}
+              // key={key}
+              key={`${key}-${period}`}  // force re-render if period changes
               title={meta.title}
               value={value}
               unit={meta.unit}

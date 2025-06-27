@@ -140,8 +140,7 @@ async def get_health_data_history(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
     
-    print(f"→ Querying data for {user.email} from {start_dt} to {end_dt}")
-
+    
 
     # 🔐 Find user by email
     result = await db.execute(select(User).where(User.email == user_email))
@@ -154,8 +153,8 @@ async def get_health_data_history(
     result = await db.execute(
         select(HealthData).where(
             HealthData.user_id == user.id,
-            HealthData.timestamp >= start_dt,
-            HealthData.timestamp <= end_dt,
+            HealthData.timestamp >= start_dt.replace(tzinfo=None),
+            HealthData.timestamp <= end_dt.replace(tzinfo=None),
         )
     )
     records: List[HealthData] = result.scalars().all()
@@ -180,6 +179,10 @@ async def get_health_data_history(
                 "diastolic": rec.diastolic
             })
     print(f"→ Found {len(records)} records")
+    print(f"[DEBUG] Found {len(records)} records for {user.email} between {start_dt} and {end_dt}")
+    for r in records:
+        print(r.timestamp, r.metric_type, r.value or (r.systolic, r.diastolic))
+
 
 
     return {
@@ -190,18 +193,21 @@ async def get_health_data_history(
 
 class SyncRequest(BaseModel):
     user_email: str
+    days_back: int = 7  # default to 7 days
 
 @router.post("/google/sync")
 async def sync_now(payload: SyncRequest, db: AsyncSession = Depends(get_db)):
     user_email = payload.user_email
+    days_back = payload.days_back
+
     result = await db.execute(select(User).where(User.email == user_email))
     user = result.scalars().first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    await sync_google_fit_data(user, db)
-    return {"detail": "Synced successfully"}
+    await sync_google_fit_data(user, db, days_back=days_back)
+    return {"detail": f"Synced successfully for last {days_back} days"}
 
 
 
