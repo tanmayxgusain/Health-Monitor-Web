@@ -162,6 +162,12 @@ async def get_health_data_history(
     heart_rate = []
     spo2 = []
     blood_pressure = []
+    steps = []
+    distance = []
+    calories = []
+    sleep = []
+    stress = []
+
 
     for rec in records:
         ts = int(rec.timestamp.timestamp() * 1000)
@@ -178,6 +184,22 @@ async def get_health_data_history(
                 "systolic": rec.systolic,
                 "diastolic": rec.diastolic
             })
+        
+        elif rec.metric_type == "steps":
+            steps.append({"timestamp": ts, "value": rec.value})
+
+        elif rec.metric_type == "distance":
+            distance.append({"timestamp": ts, "value": rec.value})
+
+        elif rec.metric_type == "calories":
+            calories.append({"timestamp": ts, "value": rec.value})
+
+        elif rec.metric_type == "sleep":
+            sleep.append({"timestamp": ts, "value": rec.value})
+
+        elif rec.metric_type == "stress":
+            stress.append({"timestamp": ts, "value": rec.value})
+
     print(f"→ Found {len(records)} records")
     print(f"[DEBUG] Found {len(records)} records for {user.email} between {start_dt} and {end_dt}")
     for r in records:
@@ -188,7 +210,12 @@ async def get_health_data_history(
     return {
         "heart_rate": heart_rate,
         "spo2": spo2,
-        "blood_pressure": blood_pressure
+        "blood_pressure": blood_pressure,
+        "steps": steps,
+        "distance": distance,
+        "calories": calories,
+        "sleep": sleep,
+        "stress": stress
     }
 
 class SyncRequest(BaseModel):

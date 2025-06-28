@@ -1,31 +1,34 @@
 import React, { useState } from "react";
 import HealthCard from "./HealthCard";
 import Dashboard from "../pages/Dashboard";
-import { iconMap } from "../pages/Dashboard"; // Adjust path as needed
+import { iconMap } from "../constants/iconMap";
+import { healthGroups } from "../constants/healthGroups";
 
 
 
-const GroupedHealthCards = ({ averageMetrics, period}) => {
-  const groups = {
-    Vitals: ["heart_rate", "blood_pressure", "spo2"],
-    Activity: ["steps", "distance", "calories"],
-    Lifestyle: ["sleep", "stress"]
-  };
+
+const GroupedHealthCards = ({ averageMetrics, period }) => {
+
 
   const [openGroup, setOpenGroup] = useState("Vitals");
 
   return (
     <div className="space-y-4">
-      {Object.entries(groups).map(([groupName, keys]) => (
+      {Object.entries(healthGroups).map(([groupName, keys]) => (
         <div key={groupName} className="bg-white rounded shadow p-4">
           <div
             className="flex justify-between items-center cursor-pointer"
             onClick={() =>
               setOpenGroup(openGroup === groupName ? null : groupName)
             }
+            role="button"
+            aria-expanded={openGroup === groupName}
+            tabIndex={0}
           >
             <h3 className="text-lg font-semibold">{groupName}</h3>
-            <span>{openGroup === groupName ? "▲" : "▼"}</span>
+            <span className="transition-transform duration-300 transform">
+              {openGroup === groupName ? "▲" : "▼"}
+            </span>
           </div>
 
           {openGroup === groupName && (

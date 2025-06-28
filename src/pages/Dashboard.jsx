@@ -14,20 +14,11 @@ import { Link } from 'react-router-dom';
 import MainLayout from "../layouts/MainLayout";
 import HealthChart from "../components/HealthChart";
 import GroupedHealthCards from "../components/GroupedHealthCards";
+import { iconMap } from "../constants/iconMap";
 
 
-export const iconMap = {
-  heart_rate: { icon: <FaHeartbeat />, unit: "bpm", color: "bg-red-500", title: "Heart Rate", group: "Vitals" },
-  blood_pressure: { icon: <FaTint />, unit: "mmHg", color: "bg-blue-500", title: "Blood Pressure", group: "Vitals" },
-  spo2: { icon: <FaLungs />, unit: "%", color: "bg-green-500", title: "SpO₂", group: "Vitals" },
 
-  steps: { icon: <FaShoePrints />, unit: "steps", color: "bg-orange-500", title: "Steps", group: "Activity" },
-  distance: { icon: <FaShoePrints />, unit: "km", color: "bg-purple-600", title: "Distance", group: "Activity" },
-  calories: { icon: <FaFireAlt />, unit: "kcal", color: "bg-pink-600", title: "Calories", group: "Activity" },
 
-  sleep: { icon: <FaBed />, unit: "hrs", color: "bg-indigo-500", title: "Sleep", group: "Lifestyle" },
-  stress: { icon: <FaLungs />, unit: "", color: "bg-yellow-700", title: "Stress", group: "Lifestyle" },
-};
 
 
 const Dashboard = () => {
@@ -49,18 +40,23 @@ const Dashboard = () => {
     heart_rate: [],
     blood_pressure: [],
     spo2: [],
+    steps: [],
+    distance: [],
+    calories: [],
+    sleep: [],
+    stress: [],
   });
 
   const [averageMetrics, setAverageMetrics] = useState({
-  heart_rate: "--",
-  spo2: "--",
-  blood_pressure: "--",
-  steps: "--",
-  distance: "--",
-  calories: "--",
-  sleep: "--",
-  stress: "--"
-});
+    heart_rate: "--",
+    spo2: "--",
+    blood_pressure: "--",
+    steps: "--",
+    distance: "--",
+    calories: "--",
+    sleep: "--",
+    stress: "--"
+  });
 
 
   const getAverage = (data) => {
@@ -85,18 +81,18 @@ const Dashboard = () => {
 
 
   const handleSync = async () => {
-  try {
-    await axios.post("http://localhost:8000/google/sync", {
-      user_email: email,
-      days_back: 7   // or 30, or whatever you want
-    });
-    alert("Synced successfully");
-    window.location.reload();
-  } catch (err) {
-    alert("Sync failed");
-    console.error(err);
-  }
-};
+    try {
+      await axios.post("http://localhost:8000/google/sync", {
+        user_email: email,
+        days_back: 7   // or 30, or whatever you want
+      });
+      alert("Synced successfully");
+      window.location.reload();
+    } catch (err) {
+      alert("Sync failed");
+      console.error(err);
+    }
+  };
 
 
   // const [error, setError] = useState(null);
@@ -202,12 +198,23 @@ const Dashboard = () => {
         heart_rate: [],
         spo2: [],
         blood_pressure: [],
+        spo2: [],
+        steps: [],
+        distance: [],
+        calories: [],
+        sleep: [],
+        stress: [],
       });
 
       setAverageMetrics({
         heart_rate: "--",
         spo2: "--",
         blood_pressure: "--",
+        steps: "--",
+        distance: "--",
+        calories: "--",
+        sleep: "--",
+        stress: "--",
       });
 
       if (period === "Today") {
@@ -234,7 +241,7 @@ const Dashboard = () => {
           });
 
           // Compute average
-          
+
           setAverageMetrics({
             heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
             spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
@@ -281,12 +288,22 @@ const Dashboard = () => {
             heart_rate: data.heart_rate || [],
             spo2: data.spo2 || [],
             blood_pressure: data.blood_pressure || [],
+            steps: data.steps || [],
+            distance: data.distance || [],
+            calories: data.calories || [],
+            sleep: data.sleep || [],
+            stress: data.stress || [],
           });
 
           setAverageMetrics({
             heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
             spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
             blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
+            steps: getAverage(data.steps),
+            distance: getAverage(data.distance),
+            calories: getAverage(data.calories),
+            sleep: getAverage(data.sleep),
+            stress: getAverage(data.stress),
           });
         } catch (err) {
           console.error("History DB fetch error:", err);
@@ -336,7 +353,10 @@ const Dashboard = () => {
 
       {/* Health Cards */}
 
-      <GroupedHealthCards averageMetrics={averageMetrics}  period={period} />
+      <GroupedHealthCards averageMetrics={averageMetrics} period={period} />
+
+      
+
 
 
       {/* Charts */}
