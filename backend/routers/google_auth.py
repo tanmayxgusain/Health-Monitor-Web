@@ -220,8 +220,15 @@ GOOGLE_FIT_API_URL = "https://www.googleapis.com/fitness/v1/users/me/dataset:agg
 DATA_TYPES = {
     "heart_rate": "com.google.heart_rate.bpm",
     "blood_pressure": "com.google.blood_pressure",
-    "spo2": "com.google.oxygen_saturation"
+    "spo2": "com.google.oxygen_saturation",
+
+    "steps": "com.google.step_count.delta",
+    "distance": "com.google.distance.delta",
+    "calories": "com.google.calories.expended",
+    "sleep": "com.google.sleep.segment",
+    "stress": "com.google.stress_level"
 }
+
 
 
 def build_request_body(data_type, start_time_millis, end_time_millis):
