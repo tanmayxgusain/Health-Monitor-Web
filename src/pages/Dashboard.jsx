@@ -368,6 +368,8 @@ const Dashboard = () => {
         <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
         <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
         <LineChartPanel title="Blood Pressure Trend" data={history.blood_pressure} unit="mmHg" />
+        <LineChartPanel title="Sleep Trend" data={history.sleep} unit="hrs" />
+        <LineChartPanel title="Stress Trend" data={history.stress} unit="level" />
       </div>
 
       <div className="min-h-[40px] text-center">

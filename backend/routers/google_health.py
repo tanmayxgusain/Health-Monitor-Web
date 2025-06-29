@@ -296,5 +296,7 @@ async def get_today_health_data(
     return {
         "heart_rate": heart_rate,
         "spo2": spo2,
-        "blood_pressure": blood_pressure
+        "blood_pressure": blood_pressure,
+        "sleep": sleep,
+        "stress": stress
     }
