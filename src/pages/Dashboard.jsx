@@ -238,6 +238,8 @@ const Dashboard = () => {
             heart_rate: data.heart_rate || [],
             spo2: data.spo2 || [],
             blood_pressure: data.blood_pressure || [],
+            sleep: data.sleep || [],
+            stress: data.stress || [],
           });
 
           // Compute average
@@ -246,6 +248,8 @@ const Dashboard = () => {
             heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
             spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
             blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
+            sleep: data.sleep?.length ? getAverage(data.sleep) : "--",
+            stress: data.stress?.length ? getAverage(data.stress) : "--",
           });
           console.log("🔢 Averages computed for", period, averageMetrics);
 
@@ -355,7 +359,7 @@ const Dashboard = () => {
 
       <GroupedHealthCards averageMetrics={averageMetrics} period={period} />
 
-      
+
 
 
 

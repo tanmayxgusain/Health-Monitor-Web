@@ -270,6 +270,8 @@ async def get_today_health_data(
     heart_rate = []
     spo2 = []
     blood_pressure = []
+    sleep = []
+    stress = []
 
     for rec in records:
         ts = int(rec.timestamp.timestamp() * 1000)
@@ -284,6 +286,12 @@ async def get_today_health_data(
                 "systolic": rec.systolic,
                 "diastolic": rec.diastolic
             })
+
+        elif rec.metric_type == "sleep" and rec.value is not None:
+            sleep.append({"timestamp": ts, "value": rec.value})
+
+        elif rec.metric_type == "stress" and rec.value is not None:
+            stress.append({"timestamp": ts, "value": rec.value})
 
     return {
         "heart_rate": heart_rate,
