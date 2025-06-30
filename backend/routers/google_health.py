@@ -272,6 +272,8 @@ async def get_today_health_data(
     blood_pressure = []
     sleep = []
     stress = []
+    steps = []
+    calories = []
 
     for rec in records:
         ts = int(rec.timestamp.timestamp() * 1000)
@@ -289,6 +291,13 @@ async def get_today_health_data(
 
         elif rec.metric_type == "sleep" and rec.value is not None:
             sleep.append({"timestamp": ts, "value": rec.value})
+        
+        elif rec.metric_type == "steps" and rec.value is not None:
+            steps.append({"timestamp": ts, "value": rec.value})
+
+        elif rec.metric_type == "calories" and rec.value is not None:
+            calories.append({"timestamp": ts, "value": rec.value})
+
 
         elif rec.metric_type == "stress" and rec.value is not None:
             stress.append({"timestamp": ts, "value": rec.value})
@@ -298,5 +307,7 @@ async def get_today_health_data(
         "spo2": spo2,
         "blood_pressure": blood_pressure,
         "sleep": sleep,
-        "stress": stress
+        "stress": stress,
+        "steps": steps,
+        "calories": calories
     }

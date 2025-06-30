@@ -240,6 +240,10 @@ const Dashboard = () => {
             blood_pressure: data.blood_pressure || [],
             sleep: data.sleep || [],
             stress: data.stress || [],
+            steps: data.steps || [],
+            distance: data.distance || [],
+            calories: data.calories || [],
+  
           });
 
           // Compute average
@@ -250,6 +254,8 @@ const Dashboard = () => {
             blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
             sleep: data.sleep?.length ? getAverage(data.sleep) : "--",
             stress: data.stress?.length ? getAverage(data.stress) : "--",
+            steps: data.steps?.length ? getAverage(data.steps) : "--",
+            calories: data.calories?.length ? getAverage(data.calories) : "--",
           });
           console.log("🔢 Averages computed for", period, averageMetrics);
 
