@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from routers.google_auth import DATA_TYPES, GOOGLE_FIT_API_URL, build_request_body
 from sqlalchemy.future import select
+from models import SleepSession
 
 async def sync_google_fit_data(user: User, db, days_back: int = 1):
     now = datetime.utcnow()

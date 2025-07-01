@@ -27,6 +27,7 @@ class User(Base):
     refresh_token = Column(String, nullable=True)
 
     health_data = relationship("HealthData", back_populates="user")
+    sleep_sessions = relationship("SleepSession", back_populates="user", cascade="all, delete-orphan")
 
     @classmethod
     async def get_by_email(cls, db: AsyncSession, email: str):
@@ -50,3 +51,15 @@ class HealthData(Base):
     timestamp = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="health_data")
+
+
+class SleepSession(Base):
+    __tablename__ = "sleep_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    duration_hours = Column(Float, nullable=False)
+
+    user = relationship("User", back_populates="sleep_sessions")

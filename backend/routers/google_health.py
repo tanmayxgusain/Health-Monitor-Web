@@ -369,6 +369,7 @@ async def get_today_health_data(
     now = datetime.utcnow()
     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
+
     # Fetch today's data from DB
     result = await db.execute(
         select(HealthData).where(
@@ -377,6 +378,8 @@ async def get_today_health_data(
             HealthData.timestamp <= now
         )
     )
+   
+
     records: List[HealthData] = result.scalars().all()
 
     # Format by metric type
@@ -387,6 +390,7 @@ async def get_today_health_data(
     stress = []
     steps = []
     calories = []
+    distance = []
 
     for rec in records:
         ts = int(rec.timestamp.timestamp() * 1000)
@@ -422,7 +426,7 @@ async def get_today_health_data(
         "sleep": sleep,
         "stress": stress,
         "steps": steps,
-        "calories": calories
+        "calories": calories,
+        "distance": distance
     }
 
-#hidsjdasdjasas
