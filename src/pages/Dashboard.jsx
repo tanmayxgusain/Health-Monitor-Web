@@ -58,6 +58,13 @@ const Dashboard = () => {
     stress: "--"
   });
 
+  const getSum = (data) => {
+    if (!data || data.length === 0) return "--";
+    const sum = data.reduce((acc, val) => acc + (val.value || 0), 0);
+    return Math.round(sum);
+  };
+
+
 
   const getAverage = (data) => {
     if (!data || data.length === 0) return "--";
@@ -245,7 +252,7 @@ const Dashboard = () => {
             calories: data.calories || [],
 
           });
-          
+
 
           // Compute average
 
@@ -253,13 +260,14 @@ const Dashboard = () => {
             heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
             spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
             blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
-            sleep: data.sleep?.length ? getAverage(data.sleep) : "--",
+            sleep: data.sleep?.length ? getSum(data.sleep) : "--",
             stress: data.stress?.length ? getAverage(data.stress) : "--",
-            steps: data.steps?.length ? getAverage(data.steps) : "--",
-            calories: data.calories?.length ? getAverage(data.calories) : "--",
+            steps: data.steps?.length ? getSum(data.steps) : "--",
+            calories: data.calories?.length ? getSum(data.calories) : "--",
+            distance: data.distance?.length ? getSum(data.distance) : "--",
 
           });
-          console.log("🔢 Averages computed for", period, averageMetrics);
+
 
         } catch (err) {
           console.error("Google Fit fetch error:", err);
@@ -311,10 +319,10 @@ const Dashboard = () => {
             heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
             spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
             blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
-            steps: getAverage(data.steps),
-            distance: getAverage(data.distance),
-            calories: getAverage(data.calories),
-            sleep: getAverage(data.sleep),
+            steps: getSum(data.steps),
+            distance: getSum(data.distance),
+            calories: getSum(data.calories),
+            sleep: getSum(data.sleep),
             stress: getAverage(data.stress),
           });
         } catch (err) {
