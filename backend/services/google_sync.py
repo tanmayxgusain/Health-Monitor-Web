@@ -1,4 +1,5 @@
 # backend/services/google_sync.py
+import json
 from models import HealthData, User
 from datetime import datetime, timedelta, timezone
 import httpx
@@ -22,6 +23,7 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
             }
 
             for key, data_type in DATA_TYPES.items():
+                request_body = build_request_body(data_type, start_millis, end_millis)
                 response = await client.post(
                     GOOGLE_FIT_API_URL,
                     headers=headers,
@@ -157,20 +159,15 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                             #             timestamp=ts_dt
                             #         ))
 
-                            if key == "blood_pressure":
-                                systolic = diastolic = None
-                                for val in point["value"]:
-                                    if val.get("mapVal"):
-                                        for entry in val.get("mapVal", []):
-                                            if entry["key"] == "systolic":
-                                                systolic = entry["value"].get("fpVal")
-                                            elif entry["key"] == "diastolic":
-                                                diastolic = entry["value"].get("fpVal")
-                                    else:
-                                        if val.get("fpVal"):
-                                            systolic = val["fpVal"]  # fallback
-                                if systolic and diastolic:
-                                    # Deduplication check
+                            elif key == "blood_pressure":
+                                values = [v.get("fpVal") for v in point["value"] if "fpVal" in v and isinstance(v.get("fpVal"), (int, float))]
+
+                                if len(values) >= 2:
+                                    # Sort values descending to assume systolic > diastolic
+                                    values.sort(reverse=True)
+                                    systolic = values[0]
+                                    diastolic = values[-1]
+
                                     exists = await db.execute(
                                         select(HealthData).where(
                                             HealthData.user_id == user.id,
@@ -189,14 +186,53 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
 
 
                             elif key == "sleep":
-                                duration_hours = (int(point["endTimeNanos"]) - int(point["startTimeNanos"])) / 1e9 / 3600
-                                if duration_hours > 0:
-                                    db.add(HealthData(
-                                        user_id=user.id,
-                                        metric_type=key,
-                                        value=round(duration_hours, 2),
-                                        timestamp=ts_dt
-                                    ))
+                                # Extract duration for meaningful sleep stages only (2: light, 3: deep, 4: REM, 5: awake)
+                                sleep_stage = point["value"][0].get("intVal", 0)
+                                start_nanos = int(point["startTimeNanos"])
+                                end_nanos = int(point["endTimeNanos"])
+                                duration_sec = (end_nanos - start_nanos) / 1e9
+                                sleep_duration = duration_sec / 3600  # Convert to hours
+
+                                print(f"[🛌 Sleep] Stage: {sleep_stage}, Duration (hrs): {sleep_duration:.2f}, Time: {ts_dt}")
+
+                                # Store only meaningful sleep stages and skip unknown/awake if needed
+                                if sleep_stage in [2, 3, 4] and sleep_duration > 0:
+                                    exists = await db.execute(
+                                        select(HealthData).where(
+                                            HealthData.user_id == user.id,
+                                            HealthData.metric_type == key,
+                                            HealthData.timestamp == ts_dt
+                                        )
+                                    )
+                                    if not exists.scalars().first():
+                                        db.add(HealthData(
+                                            user_id=user.id,
+                                            metric_type=key,
+                                            value=round(sleep_duration, 2),
+                                            timestamp=ts_dt
+                                        ))
+
+                            elif key == "distance":
+                                raw_val = point["value"][0]
+                                value = raw_val.get("fpVal") or raw_val.get("intVal")  # Fallback in case it's not fpVal
+                                print(f"[📏 Distance] Value: {value} meters at {ts_dt}")
+
+                                if value is not None and value > 0:
+                                    exists = await db.execute(
+                                        select(HealthData).where(
+                                            HealthData.user_id == user.id,
+                                            HealthData.metric_type == key,
+                                            HealthData.timestamp == ts_dt
+                                        )
+                                    )
+                                    if not exists.scalars().first():
+                                        db.add(HealthData(
+                                            user_id=user.id,
+                                            metric_type=key,
+                                            value=round(value / 1000, 2),  # Convert to km
+                                            timestamp=ts_dt
+                                        ))
+
 
                             elif key == "steps":
                                 value = point["value"][0].get("intVal")
@@ -217,6 +253,9 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                         value=stress_val,
                                         timestamp=ts_dt
                                     ))
+
+                       
+
 
                             # elif key in ["distance", "calories", "spo2", "heart_rate"]:
                             #     value = point["value"][0].get("fpVal")

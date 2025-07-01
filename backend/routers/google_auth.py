@@ -40,6 +40,8 @@ SCOPES = [
     "https://www.googleapis.com/auth/fitness.sleep.read",
     "https://www.googleapis.com/auth/fitness.body.read",
     # "https://www.googleapis.com/auth/fitness.stress.read",
+    "https://www.googleapis.com/auth/fitness.location.read",
+    "https://www.googleapis.com/auth/fitness.nutrition.read",
     "openid",
     "email",
     "profile"
@@ -231,7 +233,46 @@ DATA_TYPES = {
     "calories": "com.google.calories.expended",
     "sleep": "com.google.sleep.segment",
     "stress": "com.google.stress_level"
+    
 }
+
+# routers/google_auth.py
+
+# DATA_TYPES = {
+#     "heart_rate": {
+#         "dataTypeName": "com.google.heart_rate.bpm",
+#         "dataSourceId": "derived:com.google.heart_rate.bpm:com.google.android.gms:merge_heart_rate_bpm"
+#     },
+#     "spo2": {
+#         "dataTypeName": "com.google.oxygen_saturation",
+#         "dataSourceId": "derived:com.google.oxygen_saturation:com.google.android.gms:merged"
+#     },
+#     "blood_pressure": {
+#         "dataTypeName": "com.google.blood_pressure",
+#         "dataSourceId": "derived:com.google.blood_pressure:com.google.android.gms:merged"
+#     },
+#     "steps": {
+#         "dataTypeName": "com.google.step_count.delta",
+#         "dataSourceId": "derived:com.google.step_count.delta:com.google.android.gms:merge_step_deltas"
+#     },
+#     "calories": {
+#         "dataTypeName": "com.google.calories.expended",
+#         "dataSourceId": "derived:com.google.calories.expended:com.google.android.gms:merged"
+#     },
+#     "distance": {
+#         "dataTypeName": "com.google.distance.delta",
+#         "dataSourceId": "derived:com.google.distance.delta:com.google.android.gms:merged"
+#     },
+#     "sleep": {
+#         "dataTypeName": "com.google.sleep.segment",
+#         "dataSourceId": "derived:com.google.sleep.segment:com.google.android.gms:merged"
+#     },
+#     "stress": {
+#         "dataTypeName": "com.google.stress_level",
+#         "dataSourceId": "derived:com.google.stress_level:com.google.android.gms:merged"
+#     }
+# }
+
 
 
 
@@ -239,6 +280,8 @@ def build_request_body(data_type, start_time_millis, end_time_millis):
     return {
         "aggregateBy": [{
             "dataTypeName": data_type
+            # "dataTypeName": data_type["dataTypeName"],
+            # "dataSourceId": data_type["dataSourceId"]
         }],
         "bucketByTime": { "durationMillis": 3600000 },  # hourly buckets
         "startTimeMillis": start_time_millis,

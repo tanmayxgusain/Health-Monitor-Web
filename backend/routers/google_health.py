@@ -124,6 +124,103 @@ router = APIRouter()
 #         "blood_pressure": blood_pressure_data
 #     }
 
+# @router.get("/healthdata/history")
+# async def get_health_data_history(
+#     user_email: str,
+#     start_date: str = Query(..., description="YYYY-MM-DD"),
+#     end_date: str = Query(..., description="YYYY-MM-DD"),
+#     db: AsyncSession = Depends(get_db),
+# ):
+#     try:
+#         start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+#         end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
+#         if start_dt > end_dt:
+#             raise HTTPException(status_code=400, detail="start_date must be before end_date.")
+
+#     except ValueError:
+#         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
+    
+    
+
+#     # 🔐 Find user by email
+#     result = await db.execute(select(User).where(User.email == user_email))
+#     user = result.scalars().first()
+
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found.")
+
+
+#     # 📊 Get health records for the user between dates
+#     result = await db.execute(
+#         select(HealthData).where(
+#             HealthData.user_id == user.id,
+#             HealthData.timestamp >= start_dt.replace(tzinfo=None),
+#             HealthData.timestamp <= end_dt.replace(tzinfo=None),
+#         )
+#     )
+#     records: List[HealthData] = result.scalars().all()
+
+#     heart_rate = []
+#     spo2 = []
+#     blood_pressure = []
+#     steps = []
+#     distance = []
+#     calories = []
+#     sleep = []
+#     stress = []
+
+
+#     for rec in records:
+#         ts = int(rec.timestamp.timestamp() * 1000)
+
+#         if rec.metric_type == "heart_rate" and rec.value is not None:
+#             heart_rate.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "spo2" and rec.value is not None:
+#             spo2.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "blood_pressure" and rec.systolic and rec.diastolic:
+#             blood_pressure.append({
+#                 "timestamp": ts,
+#                 "systolic": rec.systolic,
+#                 "diastolic": rec.diastolic
+#             })
+        
+#         elif rec.metric_type == "steps":
+#             steps.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "distance":
+#             distance.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "calories":
+#             calories.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "sleep":
+#             sleep.append({"timestamp": ts, "value": rec.value})
+
+#         elif rec.metric_type == "stress":
+#             stress.append({"timestamp": ts, "value": rec.value})
+
+#     print(f"→ Found {len(records)} records")
+#     print(f"[DEBUG] Found {len(records)} records for {user.email} between {start_dt} and {end_dt}")
+#     for r in records:
+#         print(r.timestamp, r.metric_type, r.value or (r.systolic, r.diastolic))
+
+
+
+#     return {
+#         "heart_rate": heart_rate,
+#         "spo2": spo2,
+#         "blood_pressure": blood_pressure,
+#         "steps": steps,
+#         "distance": distance,
+#         "calories": calories,
+#         "sleep": sleep,
+#         "stress": stress
+#     }
+
+from sqlalchemy import func
+
 @router.get("/healthdata/history")
 async def get_health_data_history(
     user_email: str,
@@ -136,29 +233,15 @@ async def get_health_data_history(
         end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)
         if start_dt > end_dt:
             raise HTTPException(status_code=400, detail="start_date must be before end_date.")
-
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD.")
-    
-    
 
-    # 🔐 Find user by email
     result = await db.execute(select(User).where(User.email == user_email))
     user = result.scalars().first()
-
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    # 📊 Get health records for the user between dates
-    result = await db.execute(
-        select(HealthData).where(
-            HealthData.user_id == user.id,
-            HealthData.timestamp >= start_dt.replace(tzinfo=None),
-            HealthData.timestamp <= end_dt.replace(tzinfo=None),
-        )
-    )
-    records: List[HealthData] = result.scalars().all()
-
+    # Time-series data containers
     heart_rate = []
     spo2 = []
     blood_pressure = []
@@ -168,45 +251,73 @@ async def get_health_data_history(
     sleep = []
     stress = []
 
+    # Fetch all health records for date range
+    result = await db.execute(
+        select(HealthData).where(
+            HealthData.user_id == user.id,
+            HealthData.timestamp >= start_dt.replace(tzinfo=None),
+            HealthData.timestamp <= end_dt.replace(tzinfo=None),
+        )
+    )
+    records: List[HealthData] = result.scalars().all()
 
     for rec in records:
         ts = int(rec.timestamp.timestamp() * 1000)
-
         if rec.metric_type == "heart_rate" and rec.value is not None:
             heart_rate.append({"timestamp": ts, "value": rec.value})
-
         elif rec.metric_type == "spo2" and rec.value is not None:
             spo2.append({"timestamp": ts, "value": rec.value})
-
         elif rec.metric_type == "blood_pressure" and rec.systolic and rec.diastolic:
             blood_pressure.append({
                 "timestamp": ts,
                 "systolic": rec.systolic,
                 "diastolic": rec.diastolic
             })
-        
         elif rec.metric_type == "steps":
             steps.append({"timestamp": ts, "value": rec.value})
-
         elif rec.metric_type == "distance":
             distance.append({"timestamp": ts, "value": rec.value})
-
         elif rec.metric_type == "calories":
             calories.append({"timestamp": ts, "value": rec.value})
-
         elif rec.metric_type == "sleep":
             sleep.append({"timestamp": ts, "value": rec.value})
-
         elif rec.metric_type == "stress":
             stress.append({"timestamp": ts, "value": rec.value})
 
-    print(f"→ Found {len(records)} records")
-    print(f"[DEBUG] Found {len(records)} records for {user.email} between {start_dt} and {end_dt}")
-    for r in records:
-        print(r.timestamp, r.metric_type, r.value or (r.systolic, r.diastolic))
+    # Aggregate metrics
+    METRICS_SUM = {"steps", "calories", "distance", "sleep"}
+    METRICS_AVG = {"heart_rate", "spo2", "stress"}
 
+    averageMetrics = {}
 
+    for metric in METRICS_SUM | METRICS_AVG:
+        is_sum = metric in METRICS_SUM
+        # query = select(
+        #     func.sum(HealthData.value) if metric in METRICS_SUM else func.avg(HealthData.value)
+        # ).where(
+        #     HealthData.user_id == user.id,
+        #     HealthData.metric_type == metric,
+        #     HealthData.timestamp >= start_dt.replace(tzinfo=None),
+        #     HealthData.timestamp <= end_dt.replace(tzinfo=None)
+        # )
+        values = locals()[metric]
+        if values:
+            agg_val = sum([v['value'] for v in values]) if is_sum else sum([v['value'] for v in values]) / len(values)
+            averageMetrics[metric] = round(agg_val, 2)
+        else:
+            averageMetrics[metric] = None
 
+    # Handle blood pressure separately
+    bp_values = blood_pressure
+    if bp_values:
+        systolic_vals = [v["systolic"] for v in bp_values]
+        diastolic_vals = [v["diastolic"] for v in bp_values]
+        averageMetrics["blood_pressure"] = {
+            "systolic": round(sum(systolic_vals) / len(systolic_vals), 2) if systolic_vals else None,
+            "diastolic": round(sum(diastolic_vals) / len(diastolic_vals), 2) if diastolic_vals else None
+        }
+    else:
+        averageMetrics["blood_pressure"] = None
     return {
         "heart_rate": heart_rate,
         "spo2": spo2,
@@ -215,8 +326,10 @@ async def get_health_data_history(
         "distance": distance,
         "calories": calories,
         "sleep": sleep,
-        "stress": stress
+        "stress": stress,
+        "averageMetrics": averageMetrics
     }
+
 
 class SyncRequest(BaseModel):
     user_email: str

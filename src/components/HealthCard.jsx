@@ -12,6 +12,7 @@ const HealthCard = ({ title, value, unit, icon, color }) => {
             {displayValue}  
             {/* <span className="text-sm font-medium">{unit} (average)</span> */}
           </h2>
+          
         </div>
         <div className="text-3xl">{icon}</div>
       </div>

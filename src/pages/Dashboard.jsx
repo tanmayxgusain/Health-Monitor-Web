@@ -229,7 +229,7 @@ const Dashboard = () => {
           console.log("Fetched history data:", data);
           console.log("[🚦 Dashboard] period:", period, "→ startDate:", startDate);
 
-
+          console.log("[🩸 BP Raw from DB]", history.blood_pressure);
 
 
 
@@ -243,8 +243,9 @@ const Dashboard = () => {
             steps: data.steps || [],
             distance: data.distance || [],
             calories: data.calories || [],
-  
+
           });
+          
 
           // Compute average
 
@@ -256,6 +257,7 @@ const Dashboard = () => {
             stress: data.stress?.length ? getAverage(data.stress) : "--",
             steps: data.steps?.length ? getAverage(data.steps) : "--",
             calories: data.calories?.length ? getAverage(data.calories) : "--",
+
           });
           console.log("🔢 Averages computed for", period, averageMetrics);
 
@@ -292,7 +294,7 @@ const Dashboard = () => {
           console.log("Fetched history data:", data);
           console.log("[🚦 Dashboard] period:", period, "→ startDate:", startDate);
 
-
+          console.log("[🩸 BP Raw from DB]", history.blood_pressure);
 
           setHistory({
             heart_rate: data.heart_rate || [],
@@ -369,11 +371,29 @@ const Dashboard = () => {
 
 
 
+
       {/* Charts */}
+
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
         <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
-        <LineChartPanel title="Blood Pressure Trend" data={history.blood_pressure} unit="mmHg" />
+        {/* <LineChartPanel title="Blood Pressure Trend" data={history.blood_pressure} unit="mmHg" /> */}
+        <LineChartPanel
+          title="Blood Pressure Trend"
+          data={history.blood_pressure.map((d) => {
+            const date = new Date(d.timestamp);
+            const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            return {
+              systolic: d.systolic,
+              diastolic: d.diastolic,
+              time: time,
+            };
+          })}
+          color="red"
+        />
+
+
         <LineChartPanel title="Sleep Trend" data={history.sleep} unit="hrs" />
         <LineChartPanel title="Stress Trend" data={history.stress} unit="level" />
       </div>

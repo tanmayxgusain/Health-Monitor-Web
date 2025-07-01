@@ -36,19 +36,28 @@ const GroupedHealthCards = ({ averageMetrics, period }) => {
               {keys.map((key) => {
                 const meta = iconMap[key];
                 if (!meta) return null;
-                const value = averageMetrics[key] ?? "--";
+
+                let value = averageMetrics[key] ?? "--";
+                let unit = meta.unit;
+
+                // Special formatting for blood pressure
+                if (key === "blood_pressure" && value && value.systolic && value.diastolic) {
+                  value = `${value.systolic}/${value.diastolic}`;
+                  unit = "mmHg";
+                }
+
                 return (
                   <HealthCard
-                    // key={key}
                     key={`${key}-${period}`}
                     title={meta.title}
                     value={value}
-                    unit={meta.unit}
+                    unit={unit}
                     icon={meta.icon}
                     color={meta.color}
                   />
                 );
               })}
+
             </div>
           )}
         </div>
