@@ -16,8 +16,8 @@ import HealthChart from "../components/HealthChart";
 import GroupedHealthCards from "../components/GroupedHealthCards";
 import { iconMap } from "../constants/iconMap";
 
-
-
+import SleepBarChart from "../components/SleepBarChart";
+import WeeklySleepChart from "../components/WeeklySleepChart";
 
 
 
@@ -34,6 +34,7 @@ const Dashboard = () => {
   const [heartRateData, setHeartRateData] = useState("--");
   const [bpData, setBpData] = useState("--");
   const [spo2Data, setSpo2Data] = useState("--");
+  const [sleepSessions, setSleepSessions] = useState([]);
 
   // const [latest, setLatest] = useState({});
   const [history, setHistory] = useState({
@@ -224,12 +225,14 @@ const Dashboard = () => {
         stress: "--",
       });
 
-      if (period === "Today") {
-        startDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
+      try {
+        if (period === "Today") {
+          const startDate = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-        try {
-          const res = await axios.get("http://localhost:8000/google/health-data", {
+          const res = await axios.get("http://localhost:8000/healthdata/history", {
             params: { user_email: email },
+            start_date: startDate,
+            end_date: startDate,
           });
 
           const data = res.data;
@@ -269,27 +272,25 @@ const Dashboard = () => {
           });
 
 
-        } catch (err) {
-          console.error("Google Fit fetch error:", err);
-        }
-
-      } else {
-        if (period === "Yesterday") {
-          // const y = new Date();
-          // y.setDate(y.getDate() - 1);
-          // startDate = y.toISOString().split("T")[0];
-          const y = new Date();
-          y.setDate(y.getDate() - 1);
-          startDate = y.toISOString().split("T")[0];
 
 
-        } else if (period === "Custom") {
-          if (!customStart) return;
-          // startDate = new Date(customStart).toISOString().split("T")[0];
-          startDate = customStart;
-        }
+        } else {
+          if (period === "Yesterday") {
+            // const y = new Date();
+            // y.setDate(y.getDate() - 1);
+            // startDate = y.toISOString().split("T")[0];
+            const y = new Date();
+            y.setDate(y.getDate() - 1);
+            startDate = y.toISOString().split("T")[0];
 
-        try {
+
+          } else if (period === "Custom") {
+            if (!customStart) return;
+            // startDate = new Date(customStart).toISOString().split("T")[0];
+            startDate = customStart;
+          }
+
+
           const res = await axios.get("http://localhost:8000/healthdata/history", {
             params: {
               user_email: email,
@@ -325,9 +326,18 @@ const Dashboard = () => {
             sleep: getSum(data.sleep),
             stress: getAverage(data.stress),
           });
-        } catch (err) {
-          console.error("History DB fetch error:", err);
         }
+        // 🟨 Fetch Sleep Sessions for bar chart (7-day graph)
+        const sleepSessionRes = await axios.get("http://localhost:8000/sleep-sessions", {
+          params: {
+            user_email: email,
+            days: 7
+          }
+        });
+        setSleepSessions(sleepSessionRes.data.sleep_sessions); // ⬅ Make sure you’ve defined this state
+
+      } catch (err) {
+        console.error("History DB fetch error:", err);
       }
     };
 
@@ -382,7 +392,6 @@ const Dashboard = () => {
 
       {/* Charts */}
 
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
         <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
@@ -406,6 +415,8 @@ const Dashboard = () => {
         <LineChartPanel title="Stress Trend" data={history.stress} unit="level" />
       </div>
 
+      <SleepBarChart email={email} />
+      <WeeklySleepChart sleepSessions={sleepSessions} />
       <div className="min-h-[40px] text-center">
         <p className="text-sm text-gray-500 mt-2">Last updated at: {new Date().toLocaleTimeString()}</p>
       </div>
