@@ -438,3 +438,5 @@ async def sync_google_fit_data(user: User, db: AsyncSession, days_back: int = 7)
 
     await db.commit()
     print(f"[SYNC COMPLETE] Google Fit sync completed for {user.email}")
+
+#hello
