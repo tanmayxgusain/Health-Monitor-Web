@@ -49,6 +49,7 @@ class HealthData(Base):
     systolic = Column(Integer, nullable=True)
     diastolic = Column(Integer, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
+    hash = Column(String, nullable=True, index=True)
 
     user = relationship("User", back_populates="health_data")
 
