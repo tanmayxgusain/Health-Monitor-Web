@@ -57,3 +57,4 @@ async def startup_event():
                 except Exception as e:
                     print(f"❌ Failed to sync {user.email}: {e}")
 
+#This should be same for all users
