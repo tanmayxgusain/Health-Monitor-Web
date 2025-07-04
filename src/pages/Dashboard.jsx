@@ -396,7 +396,7 @@ const Dashboard = () => {
         <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
         <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
         {/* <LineChartPanel title="Blood Pressure Trend" data={history.blood_pressure} unit="mmHg" /> */}
-        <LineChartPanel
+        {/* <LineChartPanel
           title="Blood Pressure Trend"
           data={history.blood_pressure.map((d) => {
             const date = new Date(d.timestamp);
@@ -408,7 +408,19 @@ const Dashboard = () => {
             };
           })}
           color="red"
-        />
+        /> */}
+
+<LineChartPanel
+  title="Blood Pressure Trend"
+  data={history.blood_pressure.map((d) => ({
+    systolic: d.systolic,
+    diastolic: d.diastolic,
+    timestamp: d.timestamp,  // ⬅️ keep raw ISO timestamp
+  }))}
+  color="red"
+/>
+
+
 
 
         <LineChartPanel title="Sleep Trend" data={history.sleep} unit="hrs" />
