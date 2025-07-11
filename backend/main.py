@@ -30,7 +30,7 @@ app.include_router(healthdata.router)
 
 app.include_router(google_auth.router)
 app.include_router(google_health_router)
-app.include_router(ai.router)
+app.include_router(ai.router, prefix="/ai")
 
 @app.get("/")
 def root():
@@ -60,4 +60,3 @@ async def startup_event():
                 except Exception as e:
                     print(f"❌ Failed to sync {user.email}: {e}")
 
-#hello
