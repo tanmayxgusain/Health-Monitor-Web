@@ -38,11 +38,11 @@ const GroupedHealthCards = ({ averageMetrics, period }) => {
                 if (!meta) return null;
 
                 let value = averageMetrics[key] ?? "--";
-                // let unit = meta.unit;
+                
                 let unit = key === "sleep" && typeof value === "string" && value.includes("h") ? "" : meta.unit;
 
 
-                // Special formatting for blood pressure
+                
                 if (key === "blood_pressure" && value && value.systolic && value.diastolic) {
                   value = `${value.systolic}/${value.diastolic}`;
                   unit = "mmHg";

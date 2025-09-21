@@ -1,11 +1,13 @@
 # backend/services/google_sync.py
 import json
-from models import HealthData, User
+from models import HealthData, User, SleepSession
 from datetime import datetime, timedelta, timezone
 import httpx
 from routers.google_auth import DATA_TYPES, GOOGLE_FIT_API_URL, build_request_body
 from sqlalchemy.future import select
-from models import SleepSession
+from utils.fit_activity_map import ACTIVITY_MAP  
+
+from models import ActivityLog
 
 async def sync_google_fit_data(user: User, db, days_back: int = 1):
     now = datetime.utcnow()
@@ -22,6 +24,45 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
             headers = {
                 "Authorization": f"Bearer {user.access_token}"
             }
+            # STEP 1: Fetch activity segments first
+            activity_map_by_time = []
+
+            activity_body = {
+                "aggregateBy": [{ "dataTypeName": "com.google.activity.segment" }],
+                "bucketByTime": { "durationMillis": 86400000 },
+                "startTimeMillis": int(start_time.timestamp() * 1000),
+                "endTimeMillis": int(end_time.timestamp() * 1000)
+            }
+
+            activity_res = await client.post(
+                GOOGLE_FIT_API_URL,
+                headers=headers,
+                json=activity_body,
+                timeout=30.0
+            )
+
+            if activity_res.status_code == 200:
+                for bucket in activity_res.json().get("bucket", []):
+                    for dataset in bucket.get("dataset", []):
+                        for point in dataset.get("point", []):
+                            start_ms = int(point["startTimeNanos"]) // 1_000_000
+                            end_ms = int(point["endTimeNanos"]) // 1_000_000
+                            code = point["value"][0]["intVal"]
+                            activity_type = ACTIVITY_MAP.get(code, "unknown")
+                            activity_map_by_time.append({
+                                "start": datetime.fromtimestamp(start_ms / 1000, tz=timezone.utc).replace(microsecond=0),
+                                "end": datetime.fromtimestamp(end_ms / 1000, tz=timezone.utc).replace(microsecond=0),
+                                "activity": activity_type
+                            })
+
+            def infer_activity(timestamp):
+                for segment in activity_map_by_time:
+                    if segment["start"] <= timestamp <= segment["end"]:
+                        return segment["activity"]
+                return "resting"
+            
+            
+
 
             for key, data_type in DATA_TYPES.items():
                 request_body = build_request_body(data_type, start_millis, end_millis)
@@ -45,7 +86,7 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                             ts = int(point["startTimeNanos"]) // 1_000_000
                             ts_dt = datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
                             ts_dt = ts_dt.replace(microsecond=0)
-
+                            activity = infer_activity(ts_dt)
 
                             # Deduplication check
                             exists = await db.execute(
@@ -61,105 +102,7 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                             if exists.scalars().first():
                                 continue  # Skip duplicates
 
-                            # if key == "blood_pressure":
-                            #     systolic = diastolic = None
-                            #     for val in point["value"]:
-                            #         for entry in val.get("mapVal", []):
-                            #             if entry["key"] == "systolic":
-                            #                 systolic = entry["value"].get("fpVal")
-                            #             elif entry["key"] == "diastolic":
-                            #                 diastolic = entry["value"].get("fpVal")
-
-                            #     if systolic and diastolic:
-                            #         exists = await db.execute(
-                            #             select(HealthData).where(
-                            #                 HealthData.user_id == user.id,
-                            #                 HealthData.metric_type == key,
-                            #                 HealthData.timestamp == ts_dt
-                            #             )
-                            #         )
-                            #         if not exists.scalars().first():
-                            #             db.add(HealthData(
-                            #                 user_id=user.id,
-                            #                 metric_type=key,
-                            #                 systolic=int(systolic),
-                            #                 diastolic=int(diastolic),
-                            #                 timestamp=ts_dt
-                            #             ))
-
-                            # elif key == "sleep":
-                            #     sleep_type = point["value"][0].get("intVal")
-                            #     sleep_duration = (int(point["endTimeNanos"]) - int(point["startTimeNanos"])) / 1e9 / 3600  # hours
-
-                            #     if sleep_duration > 0:
-                            #         exists = await db.execute(
-                            #             select(HealthData).where(
-                            #                 HealthData.user_id == user.id,
-                            #                 HealthData.metric_type == key,
-                            #                 HealthData.timestamp == ts_dt
-                            #             )
-                            #         )
-                            #         if not exists.scalars().first():
-                            #             db.add(HealthData(
-                            #                 user_id=user.id,
-                            #                 metric_type=key,
-                            #                 value=round(sleep_duration, 2),
-                            #                 timestamp=ts_dt
-                            #             ))
-
-                            # elif key == "stress":
-                            #     stress_val = point["value"][0].get("fpVal")
-                            #     if stress_val is not None:
-                            #         exists = await db.execute(
-                            #             select(HealthData).where(
-                            #                 HealthData.user_id == user.id,
-                            #                 HealthData.metric_type == key,
-                            #                 HealthData.timestamp == ts_dt
-                            #             )
-                            #         )
-                            #         if not exists.scalars().first():
-                            #             db.add(HealthData(
-                            #                 user_id=user.id,
-                            #                 metric_type=key,
-                            #                 value=stress_val,
-                            #                 timestamp=ts_dt
-                            #             ))
-
-                            # else:
-                            #     value = point["value"][0].get("fpVal")
-                            #     if value is not None:
-                            #         exists = await db.execute(
-                            #             select(HealthData).where(
-                            #                 HealthData.user_id == user.id,
-                            #                 HealthData.metric_type == key,
-                            #                 HealthData.timestamp == ts_dt
-                            #             )
-                            #         )
-                            #         if not exists.scalars().first():
-                            #             db.add(HealthData(
-                            #                 user_id=user.id,
-                            #                 metric_type=key,
-                            #                 value=value,
-                            #                 timestamp=ts_dt
-                            #             ))
-
-                            # Handle each metric
-                            # if key == "blood_pressure":
-                            #     systolic = diastolic = None
-                            #     for val in point["value"]:
-                            #         for entry in val.get("mapVal", []):
-                            #             if entry["key"] == "systolic":
-                            #                 systolic = entry["value"].get("fpVal")
-                            #             elif entry["key"] == "diastolic":
-                            #                 diastolic = entry["value"].get("fpVal")
-                            #     if systolic and diastolic:
-                            #         db.add(HealthData(
-                            #             user_id=user.id,
-                            #             metric_type=key,
-                            #             systolic=int(systolic),
-                            #             diastolic=int(diastolic),
-                            #             timestamp=ts_dt
-                            #         ))
+                            
 
                             elif key == "blood_pressure":
                                 values = [v.get("fpVal") for v in point["value"] if "fpVal" in v and isinstance(v.get("fpVal"), (int, float))]
@@ -183,7 +126,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                             metric_type=key,
                                             systolic=int(systolic),
                                             diastolic=int(diastolic),
-                                            timestamp=ts_dt
+                                            timestamp=ts_dt,
+                                            activity_type=activity
                                         ))
 
 
@@ -237,7 +181,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                             user_id=user.id,
                                             metric_type=key,
                                             value=round(value / 1000, 2),  # Convert to km
-                                            timestamp=ts_dt
+                                            timestamp=ts_dt,
+                                            activity_type=activity
                                         ))
 
 
@@ -248,7 +193,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                         user_id=user.id,
                                         metric_type=key,
                                         value=value,
-                                        timestamp=ts_dt
+                                        timestamp=ts_dt,
+                                        activity_type=activity
                                     ))
 
                             elif key == "stress":
@@ -258,7 +204,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                         user_id=user.id,
                                         metric_type=key,
                                         value=stress_val,
-                                        timestamp=ts_dt
+                                        timestamp=ts_dt,
+                                        activity_type=activity
                                     ))
 
                        
@@ -282,7 +229,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                         user_id=user.id,
                                         metric_type=key,
                                         value=value,
-                                        timestamp=ts_dt
+                                        timestamp=ts_dt,
+                                        activity_type=activity
                                     ))
 
             # 💤 Additional fetch using sessions API for complete sleep data
@@ -327,184 +275,10 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                         ))
 
 
-
-
-
     await db.commit()
 
 
 
 
-# from datetime import datetime, timedelta
-# from sqlalchemy.ext.asyncio import AsyncSession
-# from sqlalchemy.future import select
-# from models import HealthData, User, SleepSession
-# from routers.google_auth import GOOGLE_FIT_API_URL, DATA_TYPES, build_request_body
-# import httpx
-# import hashlib
-
-
-# def get_time_range(days_back: int):
-#     end_time = datetime.utcnow()
-#     start_time = end_time - timedelta(days=days_back)
-#     return int(start_time.timestamp() * 1000), int(end_time.timestamp() * 1000)
-
-# def generate_hash(user_id: int, metric_type: str, timestamp: datetime, value: float):
-#     content = f"{user_id}:{metric_type}:{timestamp.isoformat()}:{value}"
-#     return hashlib.sha256(content.encode()).hexdigest()
-
-
-# def within_time_range(ts1: datetime, ts2: datetime, minutes: int = 5):
-#     return abs((ts1 - ts2).total_seconds()) <= minutes * 60
-
-
-# async def sync_google_fit_data(user: User, db: AsyncSession, days_back: int = 7):
-#     if not user.access_token:
-#         return
-
-#     headers = {
-#         "Authorization": f"Bearer {user.access_token}",
-#         "Content-Type": "application/json"
-#     }
-
-#     start_time_millis, end_time_millis = get_time_range(days_back)
-
-#     for metric_key, data_type_name in DATA_TYPES.items():
-#         body = build_request_body(data_type_name, start_time_millis, end_time_millis)
-
-#         async with httpx.AsyncClient() as client:
-#             response = await client.post(
-#                 GOOGLE_FIT_API_URL,
-#                 headers=headers,
-#                 json=body
-#             )
-
-#         if response.status_code != 200:
-#             print("Google Fit API error:", response.text)
-#             continue
-
-#         data = response.json()
-
-#         for bucket in data.get("bucket", []):
-#             for dataset in bucket.get("dataset", []):
-#                 data_type_name = dataset.get("dataSourceId", "").lower()
-
-#                 if "sleep.segment" in data_type_name:
-#                     for point in dataset.get("point", []):
-#                         start_time = datetime.fromtimestamp(int(point["startTimeNanos"]) / 1e9)
-#                         end_time = datetime.fromtimestamp(int(point["endTimeNanos"]) / 1e9)
-#                         duration_hours = round((end_time - start_time).total_seconds() / 3600, 2)
-
-#                         if duration_hours < 0.25:
-#                             continue
-
-#                         exists = await db.execute(
-#                             select(SleepSession).where(
-#                                 SleepSession.user_id == user.id,
-#                                 SleepSession.start_time == start_time,
-#                                 SleepSession.end_time == end_time
-#                             )
-#                         )
-#                         if exists.scalars().first():
-#                             continue
-
-#                         db.add(SleepSession(
-#                             user_id=user.id,
-#                             start_time=start_time,
-#                             end_time=end_time,
-#                             duration_hours=duration_hours
-#                         ))
-#                     continue
-
-#                 if metric_key in ["steps", "distance", "calories"]:
-#                     total = 0
-#                     for point in dataset.get("point", []):
-#                         if metric_key == "steps":
-#                             total += round(point["value"][0].get("intVal", 0))
-#                         else:
-#                             total += round(point["value"][0].get("fpVal", 0), 2)
-
-#                     if total > 0:
-#                         bucket_time = datetime.fromtimestamp(int(bucket["startTimeMillis"]) / 1000)
-#                         dedup_hash = generate_hash(user.id, metric_key, bucket_time, total)
-
-#                         exists = await db.execute(
-#                             select(HealthData).where(
-#                                 HealthData.user_id == user.id,
-#                                 HealthData.metric_type == metric_key,
-#                                 HealthData.hash == dedup_hash
-#                             )
-#                         )
-#                         if exists.scalars().first():
-#                             continue
-
-#                         db.add(HealthData(
-#                             user_id=user.id,
-#                             metric_type=metric_key,
-#                             timestamp=bucket_time,
-#                             value=total,
-#                             hash=dedup_hash
-#                         ))
-
-#                 else:
-#                     for point in dataset.get("point", []):
-#                         start_time = datetime.fromtimestamp(int(point["startTimeNanos"]) / 1e9)
-#                         values = point.get("value", [])
-
-#                         if metric_key == "blood_pressure" and len(values) >= 2:
-#                             systolic = round(values[0].get("fpVal", 0))
-#                             diastolic = round(values[1].get("fpVal", 0))
-
-#                             exists = await db.execute(
-#                                 select(HealthData).where(
-#                                     HealthData.user_id == user.id,
-#                                     HealthData.metric_type == metric_key,
-#                                     HealthData.systolic == systolic,
-#                                     HealthData.diastolic == diastolic,
-#                                     HealthData.timestamp.between(start_time - timedelta(minutes=5), start_time + timedelta(minutes=5))
-#                                 )
-#                             )
-#                             if exists.scalars().first():
-#                                 continue
-
-#                             db.add(HealthData(
-#                                 user_id=user.id,
-#                                 metric_type=metric_key,
-#                                 timestamp=start_time,
-#                                 systolic=systolic,
-#                                 diastolic=diastolic,
-#                                 hash=generate_hash(user.id, metric_key, start_time, systolic + diastolic)
-#                             ))
-#                             continue
-
-#                         elif metric_key in ["heart_rate", "spo2", "stress"]:
-#                             if metric_key == "heart_rate":
-#                                 value = round(values[0].get("fpVal", 0))
-#                             elif metric_key == "spo2":
-#                                 value = round(values[0].get("fpVal", 0) * 100, 1)
-#                             elif metric_key == "stress":
-#                                 value = round(values[0].get("fpVal", 0), 2)
-
-#                             dedup_hash = generate_hash(user.id, metric_key, start_time, value)
-
-#                             exists = await db.execute(
-#                                 select(HealthData).where(
-#                                     HealthData.user_id == user.id,
-#                                     HealthData.metric_type == metric_key,
-#                                     HealthData.hash == dedup_hash
-#                                 )
-#                             )
-#                             if exists.scalars().first():
-#                                 continue
-
-#                             db.add(HealthData(
-#                                 user_id=user.id,
-#                                 metric_type=metric_key,
-#                                 timestamp=start_time,
-#                                 value=value,
-#                                 hash=dedup_hash
-#                             ))
-
-#     await db.commit()
 
 

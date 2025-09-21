@@ -14,7 +14,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     return (
       <div className="bg-white p-2 shadow rounded text-sm">
 
-        {/* <p className="font-semibold">{label} ({format(parseISO(session.date), "d MMM")})</p> */}
+        
         <p className="font-semibold">{format(parseISO(session.date), "EEE, d MMM")}</p>
 
 
@@ -29,19 +29,19 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 
 const SleepChart = ({ sleepSessions }) => {
-  // Group total sleep per date (yyyy-MM-dd)
+  
   const groupedByDate = {};
   sleepSessions.forEach((s) => {
     const dateStr = s.date;
     groupedByDate[dateStr] = (groupedByDate[dateStr] || 0) + s.duration_hours;
   });
 
-  // Build chart for last 7 days, oldest → newest
+  
   const today = new Date();
   const last7Days = [...Array(7)].map((_, i) => {
-    const d = subDays(today, 6 - i); // oldest to newest
+    const d = subDays(today, 6 - i); 
     const dateStr = format(d, "yyyy-MM-dd");
-    const weekday = format(d, "EEE");       // Tue, Wed...
+    const weekday = format(d, "EEE");       
   
 
     return {

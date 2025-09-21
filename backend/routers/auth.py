@@ -13,13 +13,7 @@ from sqlalchemy.future import select
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-# Dependency to get DB session
-# def get_db():
-#     db = async_session()
-#     try:
-#         yield db
-#     finally:
-#         db.close()
+
 
 @router.post("/signup")
 async def signup(user: UserCreate, db: AsyncSession = Depends(get_db)):

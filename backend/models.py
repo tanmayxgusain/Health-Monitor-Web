@@ -21,11 +21,11 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     profile_pic = Column(String, nullable=True)
     password = Column(String, nullable=True)
-    age = Column(Integer, nullable=False)
-    gender = Column(String, nullable=False)
-    phone = Column(String, nullable=False)
-    country = Column(String, nullable=False)
-    role = Column(String, nullable=False)
+    age = Column(Integer, nullable=True)
+    gender = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    role = Column(String, default="Patient")
 
     # ➕ Add these new columns:
     access_token = Column(String, nullable=True)
@@ -33,6 +33,7 @@ class User(Base):
 
     health_data = relationship("HealthData", back_populates="user")
     sleep_sessions = relationship("SleepSession", back_populates="user", cascade="all, delete-orphan")
+    activities = relationship("ActivityLog", back_populates="user", cascade="all, delete-orphan")
 
     @classmethod
     async def get_by_email(cls, db: AsyncSession, email: str):
@@ -55,10 +56,8 @@ class HealthData(Base):
     diastolic = Column(Integer, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow)
     hash = Column(String, nullable=True, index=True)
-
-    user = relationship("User", back_populates="healt" \
-    "" \
-    "h_data")
+    activity_type = Column(String, nullable=True)
+    user = relationship("User", back_populates="health_data")
 
 
 class SleepSession(Base):
@@ -71,3 +70,15 @@ class SleepSession(Base):
     duration_hours = Column(Float, nullable=False)
 
     user = relationship("User", back_populates="sleep_sessions")
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    activity_type = Column(String, nullable=False)
+
+    user = relationship("User", back_populates="activities")
