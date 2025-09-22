@@ -28,7 +28,10 @@ GOOGLE_FIT_API_URL = "https://www.googleapis.com/fitness/v1/users/me/dataset:agg
 # Replace these with your actual credentials
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-REDIRECT_URI = "http://localhost:8000/auth/google/callback"
+# REDIRECT_URI = "http://localhost:8000/auth/google/callback"
+REDIRECT_URI = os.getenv("REDIRECT_URI")
+FRONTEND_URL = os.getenv("FRONTEND_URL")  # add this at the top too
+
 
 SCOPES = [
     "https://www.googleapis.com/auth/fitness.heart_rate.read",
@@ -148,8 +151,11 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
 
     # Optional: Create a JWT token or session here
 
-    frontend_url = f"http://localhost:3000/oauth-success?email={email}"
+    # frontend_url = f"http://localhost:3000/oauth-success?email={email}"
+    # return RedirectResponse(frontend_url)
+    frontend_url = f"{FRONTEND_URL}/oauth-success?email={email}"
     return RedirectResponse(frontend_url)
+
 
 
 @router.get("/auth/fitness/heart-rate")
