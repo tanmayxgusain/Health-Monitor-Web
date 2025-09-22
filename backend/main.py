@@ -19,7 +19,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", # React app origin
-                   "https://your-health-dashboard.vercel.app"  # add deployed frontend URL
+                   "https://health-monitor-djcv.onrender.com"  # add deployed frontend URL
 ],  
     allow_credentials=True,
     allow_methods=["*"],
