@@ -15,7 +15,11 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:8000/auth/login', formData);
+      // const res = await axios.post('http://localhost:8000/auth/login', formData);
+      const apiUrl = process.env.REACT_APP_API_URL;
+
+      const res = await axios.post(`${apiUrl}/auth/login`, formData);
+
       setMessage('Login successful! ✅');
       localStorage.setItem("user_email", res.data.email);
       navigate('/dashboard');
