@@ -47,13 +47,29 @@ def root():
 # Base.metadata.create_all(bind=engine)
 
 # # ✅ Async table creation
+# @app.on_event("startup")
+# async def on_startup():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)
+
+# @app.on_event("startup")
+# async def startup_event():
+#     async with async_session() as db:
+#         result = await db.execute(select(User))
+#         users = result.scalars().all()
+#         for user in users:
+#             if user.access_token:
+#                 try:
+#                     await sync_google_fit_data(user, db)
+#                     print(f"✅ Synced data for {user.email}")
+#                 except Exception as e:
+#                     print(f"❌ Failed to sync {user.email}: {e}")
+
 @app.on_event("startup")
-async def on_startup():
+async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-@app.on_event("startup")
-async def startup_event():
     async with async_session() as db:
         result = await db.execute(select(User))
         users = result.scalars().all()
@@ -64,4 +80,5 @@ async def startup_event():
                     print(f"✅ Synced data for {user.email}")
                 except Exception as e:
                     print(f"❌ Failed to sync {user.email}: {e}")
+
 
