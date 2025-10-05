@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import api from "../axios";
+import api from "../api/axios";
+
 
 const AnomalyCard = ({ email, selectedDate }) => {
   const [data, setData] = useState(null);
