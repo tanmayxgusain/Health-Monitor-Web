@@ -79,7 +79,10 @@ const ProfilePage = () => {
     const fetchUser = async () => {
       try {
         const email = localStorage.getItem("user_email");
-        const res = await axios.get(`http://localhost:8000/users/profile?email=${email}`);
+        const apiUrl = process.env.REACT_APP_API_URL;
+        // const res = await axios.get(`http://localhost:8000/users/profile?email=${email}`);
+        const res = await axios.get(`${apiUrl}/users/profile?email=${email}`);
+
         const userData = res.data;
         setUser((prev) => ({
           ...prev,
@@ -89,7 +92,9 @@ const ProfilePage = () => {
         setOriginalUser(userData);
 
         // ✅ Fetch device info after user profile is loaded
-        const deviceRes = await axios.get(`http://localhost:8000/google/devices?user_email=${userData.email}`);
+        // const deviceRes = await axios.get(`http://localhost:8000/google/devices?user_email=${userData.email}`);
+        const deviceRes = await axios.get(`${apiUrl}/google/devices?user_email=${email}`);
+
         setDevices(deviceRes.data.devices || []);
       } catch (err) {
         console.error("Failed to load profile:", err);

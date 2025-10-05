@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import api from "../axios";
 
 const AnomalyCard = ({ email, selectedDate }) => {
   const [data, setData] = useState(null);
@@ -19,9 +20,10 @@ const AnomalyCard = ({ email, selectedDate }) => {
         }
         // const dateParam = selectedDate? `&date=${selectedDate.toISOString().split("T")[0]}`: "";
         const dateParam = formattedDate ? `&date=${formattedDate}` : "";
-        const res = await axios.get(
-          `http://localhost:8000/ai/anomaly?email=${email}${dateParam}`
-        );
+        // const res = await axios.get(
+        //   `http://localhost:8000/ai/anomaly?email=${email}${dateParam}`
+        // );
+        const res = await api.get(`/ai/anomaly?email=${email}${dateParam}`);
         setData(res.data);
         setStatus("success");
       } catch (err) {

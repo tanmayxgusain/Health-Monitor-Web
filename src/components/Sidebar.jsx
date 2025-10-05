@@ -51,10 +51,19 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
           <FaUser />
           {!collapsed && <span>Profile</span>}
         </NavLink>
-        <NavLink to="/logout" className={linkClasses}>
+        {/* <NavLink to="/logout" className={linkClasses}>
           <FaSignOutAlt />
           {!collapsed && <span>Logout</span>}
-        </NavLink>
+        </NavLink> */}
+
+        <div
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2 rounded-lg text-gray-700 hover:bg-blue-100 hover:text-blue-600 cursor-pointer"
+        >
+          <FaSignOutAlt />
+          {!collapsed && <span>Logout</span>}
+        </div>
+
 
 
       </nav>
