@@ -1,29 +1,27 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaHeartbeat, FaTint, FaLungs, FaBed, FaShoePrints, FaFireAlt } from "react-icons/fa";
+
 import axios from "axios";
-import api from "../api/axios";
+
 
 import PeriodSelector from "../components/PeriodSelector";
-import HealthCard from "../components/HealthCard";
 
-import StatCard from "../components/StatCard";
+
+
 import LineChartPanel from "../components/LineChartPanel";
-import { Link } from 'react-router-dom';
-import MainLayout from "../layouts/MainLayout";
-import HealthChart from "../components/HealthChart";
+
 import GroupedHealthCards from "../components/GroupedHealthCards";
-import { iconMap } from "../constants/iconMap";
+
 
 
 import SleepChart from "../components/SleepChart";
 
-import AiInsightCard from "../components/AiInsightCard";
+
 import InsightsPanel from "../components/InsightsPanel";
 import ActivityChart from "../components/ActivityChart";
 import AnomalyCard from "../components/AnomalyCard";
-import { format } from "date-fns"; 
+
 
 const formatDuration = (hours) => {
   if (!hours || hours === "--") return "--";
@@ -35,7 +33,7 @@ const formatDuration = (hours) => {
 const Dashboard = () => {
   const [period, setPeriod] = useState("Today");
   const [customStart, setCustomStart] = useState(null);
-  const [customEnd, setCustomEnd] = useState(null);
+  
 
   const selectedDate = (() => {
     const now = new Date();

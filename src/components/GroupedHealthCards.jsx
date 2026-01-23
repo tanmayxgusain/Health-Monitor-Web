@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import HealthCard from "./HealthCard";
-import Dashboard from "../pages/Dashboard";
+
 import { iconMap } from "../constants/iconMap";
 import { healthGroups } from "../constants/healthGroups";
 

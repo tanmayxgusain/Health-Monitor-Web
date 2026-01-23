@@ -1,5 +1,4 @@
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa";
-import React from "react";
+
 
 const periods = ["Today", "Yesterday", "Custom"];
 
