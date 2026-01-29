@@ -6,6 +6,7 @@ import {
   FaTachometerAlt,
   FaUser,
   FaSignOutAlt,
+  FaHeartbeat, // new icon for Personalized Dashboard
 } from "react-icons/fa";
 
 const Sidebar = ({ collapsed, toggleSidebar }) => {
@@ -55,6 +56,12 @@ const Sidebar = ({ collapsed, toggleSidebar }) => {
           <FaSignOutAlt />
           {!collapsed && <span>Logout</span>}
         </NavLink> */}
+
+        {/* Personalized Dashboard Link */}
+        <NavLink to="/personal-dashboard" className={linkClasses}>
+          <FaHeartbeat />
+          {!collapsed && <span>Personalized Dashboard</span>}
+        </NavLink>
 
         <div
           onClick={handleLogout}

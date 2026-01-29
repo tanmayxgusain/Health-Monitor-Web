@@ -19,14 +19,9 @@ const Landing = () => {
           className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
           onClick={() => navigate("/login")}
         >
-          Login
+          Get Started
         </button>
-        <button
-          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded"
-          onClick={() => navigate("/signup")}
-        >
-          Sign Up
-        </button>
+        
       </div>
 
       <footer className="absolute bottom-4 text-gray-500 text-sm">

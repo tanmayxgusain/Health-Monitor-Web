@@ -74,6 +74,9 @@ async def login():
         "access_type": "offline",
         "prompt": "consent"
     })
+    print("REDIRECT_URI =", os.getenv("REDIRECT_URI"))
+    print("FRONTEND_URL =", os.getenv("FRONTEND_URL"))
+
     return RedirectResponse(f"{GOOGLE_AUTH_URL}?{query}")
 
 
@@ -94,6 +97,8 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
         "redirect_uri": REDIRECT_URI,
         "grant_type": "authorization_code",
     }
+    print("REDIRECT_URI =", os.getenv("REDIRECT_URI"))
+    print("FRONTEND_URL =", os.getenv("FRONTEND_URL"))
 
     # token_response = requests.post(token_url, data=token_data)
     async with httpx.AsyncClient() as client:
@@ -130,7 +135,7 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     # user = db.query(User).filter(User.email == email).first()
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
-
+    
     if not user:
         user = User(
             name=name,
@@ -154,6 +159,8 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     # frontend_url = f"http://localhost:3000/oauth-success?email={email}"
     # return RedirectResponse(frontend_url)
     frontend_url = f"{FRONTEND_URL}/oauth-success?email={email}"
+    
+
     return RedirectResponse(frontend_url)
 
 

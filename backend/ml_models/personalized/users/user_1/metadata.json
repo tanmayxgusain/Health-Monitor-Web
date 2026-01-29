@@ -1,0 +1,11 @@
+{
+    "last_trained": "2026-01-26T16:52:32.442428",
+    "n_records": 19,
+    "metrics": [
+        "heart_rate",
+        "spo2",
+        "systolic_bp",
+        "diastolic_bp"
+    ],
+    "model_version": "v1.0"
+}

@@ -1,5 +1,4 @@
 # backend/services/google_sync.py
-import json
 from models import HealthData, User, SleepSession
 from datetime import datetime, timedelta, timezone
 import httpx
@@ -7,12 +6,14 @@ from routers.google_auth import DATA_TYPES, GOOGLE_FIT_API_URL, build_request_bo
 from sqlalchemy.future import select
 from utils.fit_activity_map import ACTIVITY_MAP  
 
-from models import ActivityLog
+from services.train_user_model import train_user_model, should_retrain_user_model
+import os
 
 async def sync_google_fit_data(user: User, db, days_back: int = 1):
     now = datetime.utcnow()
 
     async with httpx.AsyncClient() as client:
+        added_rows = 0
         for offset in range(days_back):
             day = now - timedelta(days=offset)
             start_time = day.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -26,6 +27,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
             }
             # STEP 1: Fetch activity segments first
             activity_map_by_time = []
+            
+
 
             activity_body = {
                 "aggregateBy": [{ "dataTypeName": "com.google.activity.segment" }],
@@ -65,7 +68,7 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
 
 
             for key, data_type in DATA_TYPES.items():
-                request_body = build_request_body(data_type, start_millis, end_millis)
+                # request_body = build_request_body(data_type, start_millis, end_millis)
                 response = await client.post(
                     GOOGLE_FIT_API_URL,
                     headers=headers,
@@ -129,6 +132,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                             timestamp=ts_dt,
                                             activity_type=activity
                                         ))
+                                        added_rows += 1
+
 
 
                             elif key == "sleep":
@@ -161,6 +166,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                             end_time=end_dt,
                                             duration_hours=round(sleep_duration, 2),
                                         ))
+                                        
+
 
 
                             elif key == "distance":
@@ -184,6 +191,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                             timestamp=ts_dt,
                                             activity_type=activity
                                         ))
+                                        
+
 
 
                             elif key == "steps":
@@ -196,6 +205,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                         timestamp=ts_dt,
                                         activity_type=activity
                                     ))
+                                    
+
 
                             elif key == "stress":
                                 stress_val = point["value"][0].get("fpVal")
@@ -207,6 +218,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                         timestamp=ts_dt,
                                         activity_type=activity
                                     ))
+                                    
+
 
                        
 
@@ -232,6 +245,8 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                                         timestamp=ts_dt,
                                         activity_type=activity
                                     ))
+                                    added_rows += 1
+
 
             # 💤 Additional fetch using sessions API for complete sleep data
             session_url = "https://www.googleapis.com/fitness/v1/users/me/sessions"
@@ -273,9 +288,42 @@ async def sync_google_fit_data(user: User, db, days_back: int = 1):
                             end_time=end_dt,
                             duration_hours=duration_hours
                         ))
+                        
+
 
 
     await db.commit()
+
+    # ✅ Train logic:
+    # 1) Train first-time model if missing
+    # 2) Else retrain only if Option C conditions are met
+    try:
+        if added_rows == 0:
+            print(f"⏭️ No new rows synced for {user.email}, skipping training check")
+        
+        else:
+
+            # NOTE: train_user_model saves to backend/ml_models/... after you fix BASE_PATH in train_user_model.py
+            backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+            model_base = os.path.join(backend_dir, "ml_models", "personalized", "users")
+            user_folder = os.path.join(model_base, f"user_{user.id}")
+            model_path = os.path.join(user_folder, "unsupervised_model.pkl")
+            scaler_path = os.path.join(user_folder, "scaler.pkl")
+
+            if not (os.path.exists(model_path) and os.path.exists(scaler_path)):
+                await train_user_model(user.id, db)
+                print(f"✅ Trained first personalized model for {user.email}")
+            else:
+                if await should_retrain_user_model(user.id, db):
+                    await train_user_model(user.id, db)
+                    print(f"✅ Retrained personalized model for {user.email}")
+                else:
+                    print(f"⏭️ Skipped retrain for {user.email} (not enough new data / cooldown)")
+
+    except Exception as e:
+        print(f"❌ Train/retrain failed for {user.email}: {e}")
+
+
 
 
 

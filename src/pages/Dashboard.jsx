@@ -18,9 +18,9 @@ import GroupedHealthCards from "../components/GroupedHealthCards";
 import SleepChart from "../components/SleepChart";
 
 
-import InsightsPanel from "../components/InsightsPanel";
+
 import ActivityChart from "../components/ActivityChart";
-import AnomalyCard from "../components/AnomalyCard";
+
 
 
 const formatDuration = (hours) => {
@@ -87,8 +87,7 @@ const Dashboard = () => {
     stress: "--"
   });
 
-  const [aiInsight, setAiInsight] = useState(null);
-  const [insights, setInsights] = useState([]);
+ 
 
   
 
@@ -145,8 +144,8 @@ const Dashboard = () => {
 
   const handleSync = async () => {
     try {
-      // await axios.post("http://localhost:8000/google/sync", {
-      await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
+      await axios.post("http://localhost:8000/google/sync", {
+      // await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
         user_email: email,
         days_back: 7   // or 30, or whatever you want
       });
@@ -201,8 +200,8 @@ const Dashboard = () => {
       const today = new Date();
       let startDate;
       try {
-        // const sleepSessionRes = await axios.get("http://localhost:8000/sleep-sessions", {
-        const sleepSessionRes = await axios.get("https://health-monitor-djcv.onrender.com/sleep-sessions", {
+        const sleepSessionRes = await axios.get("http://localhost:8000/sleep-sessions", {
+        // const sleepSessionRes = await axios.get("https://health-monitor-djcv.onrender.com/sleep-sessions", {
           params: {
             user_email: email,
             days: 60
@@ -224,8 +223,8 @@ const Dashboard = () => {
 
 
 
-          // const res = await axios.get("http://localhost:8000/healthdata/history", {
-          const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
+          const res = await axios.get("http://localhost:8000/healthdata/history", {
+          // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
             params: {
               user_email: email,
               start_date: startDate,
@@ -322,8 +321,8 @@ const Dashboard = () => {
           }
 
 
-          // const res = await axios.get("http://localhost:8000/healthdata/history", {
-          const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
+          const res = await axios.get("http://localhost:8000/healthdata/history", {
+          // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
             params: {
               user_email: email,
               start_date: startDate,
@@ -394,8 +393,8 @@ const Dashboard = () => {
 
       // Fetch activity logs
       try {
-        // const actRes = await axios.get("http://localhost:8000/activity-logs", {
-        const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
+        const actRes = await axios.get("http://localhost:8000/activity-logs", {
+        // const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
           params: {
             user_email: email,
             days: 7
@@ -422,8 +421,8 @@ const Dashboard = () => {
       if (!email) return;
 
       try {
-        // const res = await axios.get(`http://localhost:8000/users/profile?email=${email}`);
-        const res = await axios.get(`https://health-monitor-djcv.onrender.com/users/profile?email=${email}`);
+        const res = await axios.get(`http://localhost:8000/users/profile?email=${email}`);
+        // const res = await axios.get(`https://health-monitor-djcv.onrender.com/users/profile?email=${email}`);
         const userData = res.data;
         setUserName(userData.name || "User");  // fallback to "User"
       } catch (err) {
@@ -435,16 +434,7 @@ const Dashboard = () => {
   }, []);
 
 
-  useEffect(() => {
-    const fetchInsights = async () => {
-      const email = localStorage.getItem("user_email");
-      // const res = await axios.get(`http://localhost:8000/ai/insights?user_email=${email}`);
-      const res = await axios.get(`https://health-monitor-djcv.onrender.com/ai/insights?user_email=${email}`);
-      setInsights(res.data.insights || []);
-    };
-
-    fetchInsights();
-  }, []);
+  
 
 
 
@@ -490,9 +480,9 @@ const Dashboard = () => {
 
       
 
-      <AnomalyCard email={email} selectedDate={selectedDate} />
+      
 
-      <InsightsPanel insights={insights} />
+     
 
 
 
