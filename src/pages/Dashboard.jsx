@@ -33,7 +33,7 @@ const formatDuration = (hours) => {
 const Dashboard = () => {
   const [period, setPeriod] = useState("Today");
   const [customStart, setCustomStart] = useState(null);
-  
+
 
   const selectedDate = (() => {
     const now = new Date();
@@ -62,6 +62,11 @@ const Dashboard = () => {
   const [sleepSessions, setSleepSessions] = useState([]);
   const [userName, setUserName] = useState("");
   const [activityLogs, setActivityLogs] = useState([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncState, setSyncState] = useState("idle");   // idle | syncing | success | error
+
+
+
 
 
 
@@ -87,9 +92,9 @@ const Dashboard = () => {
     stress: "--"
   });
 
- 
 
-  
+
+
 
   // ✅ Integer sum – use for steps, calories
   const getSumInt = (data) => {
@@ -102,17 +107,59 @@ const Dashboard = () => {
     if (!data || data.length === 0) return 0;
     return data.reduce((acc, val) => acc + (val.value || val.duration_hours || 0), 0);
   };
-  
 
-
-
-
-  
 
   const getSleepDurationSum = (sessions) => {
     if (!sessions || sessions.length === 0) return 0;
     return sessions.reduce((acc, session) => acc + (session.duration_hours || 0), 0);
   };
+
+  const toNums = (arr) => (arr || []).map(x => Number(x?.value)).filter(v => Number.isFinite(v));
+
+  const getMin = (data) => {
+    const nums = toNums(data);
+    if (!nums.length) return "--";
+    return Math.min(...nums);
+  };
+
+  const getMax = (data) => {
+    const nums = toNums(data);
+    if (!nums.length) return "--";
+    return Math.max(...nums);
+  };
+
+  const getMedian = (data) => {
+    const nums = toNums(data).sort((a, b) => a - b);
+    if (!nums.length) return "--";
+    const mid = Math.floor(nums.length / 2);
+    if (nums.length % 2 === 0) return Math.round((nums[mid - 1] + nums[mid]) / 2);
+    return Math.round(nums[mid]);
+  };
+
+  const getAvgRounded = (data) => {
+    const nums = toNums(data);
+    if (!nums.length) return "--";
+    const sum = nums.reduce((a, b) => a + b, 0);
+    return Math.round(sum / nums.length);
+  };
+
+  const getLatestBP = (bpArr) => {
+    const arr = (bpArr || [])
+      .filter(d => d?.systolic != null && d?.diastolic != null && d?.timestamp)
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    if (!arr.length) return "--";
+    const last = arr[arr.length - 1];
+    return `${Math.round(Number(last.systolic))}/${Math.round(Number(last.diastolic))}`;
+  };
+
+  const getAvgBP = (bpArr) => {
+    const arr = (bpArr || []).filter(d => d?.systolic != null && d?.diastolic != null);
+    if (!arr.length) return "--";
+    const s = arr.reduce((a, d) => a + Number(d.systolic), 0) / arr.length;
+    const di = arr.reduce((a, d) => a + Number(d.diastolic), 0) / arr.length;
+    return `${Math.round(s)}/${Math.round(di)}`;
+  };
+
 
 
 
@@ -142,23 +189,56 @@ const Dashboard = () => {
   };
 
 
+  // const handleSync = async () => {
+  //   try {
+  //     await axios.post("http://localhost:8000/google/sync", {
+  //       // await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
+  //       user_email: email,
+  //       days_back: 7   // or 30, or whatever you want
+  //     });
+  //     alert("Synced successfully");
+  //     window.location.reload();
+  //   } catch (err) {
+  //     alert("Sync failed");
+  //     console.error(err);
+  //   }
+  // };
+
   const handleSync = async () => {
+    if (syncState !== "idle") return;
+
     try {
+      setSyncState("syncing");
+
       await axios.post("http://localhost:8000/google/sync", {
-      // await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
+        // await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
         user_email: email,
-        days_back: 7   // or 30, or whatever you want
+        days_back: 7
       });
-      alert("Synced successfully");
-      window.location.reload();
+
+      setSyncState("success");
+
+      // Refresh data instead of full reload (better UX)
+      // If you still want reload, keep it here
+      // window.location.reload();
+
+      setTimeout(() => {
+        setSyncState("idle");
+      }, 5000);
     } catch (err) {
-      alert("Sync failed");
       console.error(err);
+      setSyncState("error");
+
+      setTimeout(() => {
+        setSyncState("idle");
+      }, 5000);
     }
   };
 
 
-  
+
+
+
 
 
 
@@ -167,7 +247,7 @@ const Dashboard = () => {
   }, []);
 
 
-  
+
 
   useEffect(() => {
     const fetchHealthData = async () => {
@@ -201,7 +281,7 @@ const Dashboard = () => {
       let startDate;
       try {
         const sleepSessionRes = await axios.get("http://localhost:8000/sleep-sessions", {
-        // const sleepSessionRes = await axios.get("https://health-monitor-djcv.onrender.com/sleep-sessions", {
+          // const sleepSessionRes = await axios.get("https://health-monitor-djcv.onrender.com/sleep-sessions", {
           params: {
             user_email: email,
             days: 60
@@ -212,7 +292,7 @@ const Dashboard = () => {
         if (period === "Today") {
 
 
-          
+
 
 
           // Convert to IST (UTC+5:30)
@@ -224,7 +304,7 @@ const Dashboard = () => {
 
 
           const res = await axios.get("http://localhost:8000/healthdata/history", {
-          // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
+            // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
             params: {
               user_email: email,
               start_date: startDate,
@@ -256,46 +336,93 @@ const Dashboard = () => {
 
           // Compute average
 
-          setAverageMetrics({
-            heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
-            spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
-            blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
-            stress: data.stress?.length ? getAverage(data.stress) : "--",
-            steps: data.steps?.length ? getSumInt(data.steps) : "--",
-            calories: data.calories?.length ? getSumInt(data.calories) : "--",
-            // distance: data.distance?.length ? getSum(data.distance) : "--",
-            distance: data.distance?.length ? getSumFloat(data.distance).toFixed(2) : "--",
+          // setAverageMetrics({
+          //   heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
+          //   spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
+          //   blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
+          //   stress: data.stress?.length ? getAverage(data.stress) : "--",
+          //   steps: data.steps?.length ? getSumInt(data.steps) : "--",
+          //   calories: data.calories?.length ? getSumInt(data.calories) : "--",
+          //   // distance: data.distance?.length ? getSum(data.distance) : "--",
+          //   distance: data.distance?.length ? getSumFloat(data.distance).toFixed(2) : "--",
 
-            
+
+
+          //   sleep: (() => {
+          //     const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+
+          //     // Treat selected startDate as IST midnight
+          //     const targetIST = new Date(startDate + "T00:00:00+05:30");
+          //     const nextIST = new Date(targetIST.getTime() + 24 * 60 * 60 * 1000);
+
+          //     const filteredSleepSessions = sleepSessionRes.data.sleep_sessions.filter(session => {
+          //       const sessionStart = new Date(session.start_time); // UTC from backend
+          //       const sessionEnd = new Date(session.end_time);     // UTC from backend
+
+          //       return sessionStart < nextIST && sessionEnd > targetIST;
+          //     });
+
+          //     console.log(`🛌 Filtered sessions for ${startDate}`, filteredSleepSessions);
+          //     console.log("Sleep sessions received:", sleepSessions);
+
+
+          //     return filteredSleepSessions.length
+          //       ? formatDuration(getSumFloat(filteredSleepSessions))
+          //       : "--";
+          //   })(),
+
+
+
+
+
+          // });
+
+          setAverageMetrics({
+            heart_rate: data.heart_rate?.length
+              ? { primary: getMedian(data.heart_rate), unit: "bpm", subtitle: `Low ${getMin(data.heart_rate)} • High ${getMax(data.heart_rate)}` }
+              : { primary: "--", unit: "bpm", subtitle: "" },
+
+            spo2: data.spo2?.length
+              ? { primary: getMin(data.spo2), unit: "%", subtitle: `Avg ${getAvgRounded(data.spo2)}%` }
+              : { primary: "--", unit: "%", subtitle: "" },
+
+            blood_pressure: data.blood_pressure?.length
+              ? { primary: getLatestBP(data.blood_pressure), unit: "mmHg", subtitle: `Today avg ${getAvgBP(data.blood_pressure)}` }
+              : { primary: "--", unit: "mmHg", subtitle: "" },
+
+            stress: data.stress?.length
+              ? { primary: getMedian(data.stress), unit: "level", subtitle: `Peak ${getMax(data.stress)}` }
+              : { primary: "--", unit: "level", subtitle: "" },
+
+            steps: data.steps?.length
+              ? { primary: getSumInt(data.steps), unit: "", subtitle: "Today total" }
+              : { primary: "--", unit: "", subtitle: "" },
+
+            calories: data.calories?.length
+              ? { primary: getSumInt(data.calories), unit: "kcal", subtitle: "Today total" }
+              : { primary: "--", unit: "kcal", subtitle: "" },
+
+            distance: data.distance?.length
+              ? { primary: `${getSumFloat(data.distance).toFixed(2)}`, unit: "km", subtitle: "Today total" }
+              : { primary: "--", unit: "km", subtitle: "" },
 
             sleep: (() => {
               const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-
-              // Treat selected startDate as IST midnight
               const targetIST = new Date(startDate + "T00:00:00+05:30");
               const nextIST = new Date(targetIST.getTime() + 24 * 60 * 60 * 1000);
 
               const filteredSleepSessions = sleepSessionRes.data.sleep_sessions.filter(session => {
-                const sessionStart = new Date(session.start_time); // UTC from backend
-                const sessionEnd = new Date(session.end_time);     // UTC from backend
-
+                const sessionStart = new Date(session.start_time);
+                const sessionEnd = new Date(session.end_time);
                 return sessionStart < nextIST && sessionEnd > targetIST;
               });
 
-              console.log(`🛌 Filtered sessions for ${startDate}`, filteredSleepSessions);
-              console.log("Sleep sessions received:", sleepSessions);
-
-
               return filteredSleepSessions.length
-                ? formatDuration(getSumFloat(filteredSleepSessions))
-                : "--";
+                ? { primary: formatDuration(getSumFloat(filteredSleepSessions)), unit: "", subtitle: "Last night" }
+                : { primary: "--", unit: "", subtitle: "" };
             })(),
-
-
-
-
-
           });
+
 
 
 
@@ -304,7 +431,7 @@ const Dashboard = () => {
           let startDate;
           if (period === "Yesterday") {
 
-            
+
 
             const now = new Date();
             const offsetMs = 5.5 * 60 * 60 * 1000;
@@ -322,7 +449,7 @@ const Dashboard = () => {
 
 
           const res = await axios.get("http://localhost:8000/healthdata/history", {
-          // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
+            // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
             params: {
               user_email: email,
               start_date: startDate,
@@ -331,7 +458,7 @@ const Dashboard = () => {
           });
 
           const data = res.data;
-          
+
 
           setHistory({
             heart_rate: data.heart_rate || [],
@@ -345,45 +472,51 @@ const Dashboard = () => {
           });
 
           setAverageMetrics({
-            heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
-            spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
-            blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
-            steps: getSumInt(data.steps),
-            distance: getSumFloat(data.distance),
-            calories: getSumInt(data.calories),
-            stress: getAverage(data.stress),
-            
+            heart_rate: data.heart_rate?.length
+              ? { primary: getMedian(data.heart_rate), unit: "bpm", subtitle: `Low ${getMin(data.heart_rate)} • High ${getMax(data.heart_rate)}` }
+              : { primary: "--", unit: "bpm", subtitle: "" },
+
+            spo2: data.spo2?.length
+              ? { primary: getMin(data.spo2), unit: "%", subtitle: `Avg ${getAvgRounded(data.spo2)}%` }
+              : { primary: "--", unit: "%", subtitle: "" },
+
+            blood_pressure: data.blood_pressure?.length
+              ? { primary: getLatestBP(data.blood_pressure), unit: "mmHg", subtitle: `Today avg ${getAvgBP(data.blood_pressure)}` }
+              : { primary: "--", unit: "mmHg", subtitle: "" },
+
+            stress: data.stress?.length
+              ? { primary: getMedian(data.stress), unit: "level", subtitle: `Peak ${getMax(data.stress)}` }
+              : { primary: "--", unit: "level", subtitle: "" },
+
+            steps: data.steps?.length
+              ? { primary: getSumInt(data.steps), unit: "", subtitle: "Today total" }
+              : { primary: "--", unit: "", subtitle: "" },
+
+            calories: data.calories?.length
+              ? { primary: getSumInt(data.calories), unit: "kcal", subtitle: "Today total" }
+              : { primary: "--", unit: "kcal", subtitle: "" },
+
+            distance: data.distance?.length
+              ? { primary: `${getSumFloat(data.distance).toFixed(2)}`, unit: "km", subtitle: "Today total" }
+              : { primary: "--", unit: "km", subtitle: "" },
 
             sleep: (() => {
               const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-
-              // Treat selected startDate as IST midnight
               const targetIST = new Date(startDate + "T00:00:00+05:30");
               const nextIST = new Date(targetIST.getTime() + 24 * 60 * 60 * 1000);
 
               const filteredSleepSessions = sleepSessionRes.data.sleep_sessions.filter(session => {
-                const sessionStart = new Date(session.start_time); // UTC from backend
-                const sessionEnd = new Date(session.end_time);     // UTC from backend
-
+                const sessionStart = new Date(session.start_time);
+                const sessionEnd = new Date(session.end_time);
                 return sessionStart < nextIST && sessionEnd > targetIST;
               });
 
-              console.log(`🛌 Filtered sessions for ${startDate}`, filteredSleepSessions);
-              console.log("Sleep sessions received:", sleepSessions);
-
-
               return filteredSleepSessions.length
-                ? formatDuration(getSumFloat(filteredSleepSessions))
-                : "--";
+                ? { primary: formatDuration(getSumFloat(filteredSleepSessions)), unit: "", subtitle: "Last night" }
+                : { primary: "--", unit: "", subtitle: "" };
             })(),
-
-
-
-
-
-
-
           });
+
         }
         // 🟨 Fetch Sleep Sessions for bar chart (7-day graph)
 
@@ -394,7 +527,7 @@ const Dashboard = () => {
       // Fetch activity logs
       try {
         const actRes = await axios.get("http://localhost:8000/activity-logs", {
-        // const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
+          // const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
           params: {
             user_email: email,
             days: 7
@@ -414,7 +547,7 @@ const Dashboard = () => {
 
 
 
-  
+
 
   useEffect(() => {
     const fetchUserName = async () => {
@@ -434,7 +567,7 @@ const Dashboard = () => {
   }, []);
 
 
-  
+
 
 
 
@@ -457,7 +590,32 @@ const Dashboard = () => {
 
       <h2 className="text-2xl font-bold text-gray-800">Health Dashboard</h2>
 
-      <button onClick={handleSync} className="text-sm px-3 py-1 bg-blue-500 text-white rounded">Sync Now</button>
+      {/* <button onClick={handleSync} className="text-sm px-3 py-1 bg-blue-500 text-white rounded">Sync Now</button> */}
+
+      <button
+        onClick={handleSync}
+        disabled={syncState !== "idle"}
+        className={`text-sm px-4 py-2 rounded flex items-center gap-2 font-medium transition-colors
+    ${syncState === "syncing"
+            ? "bg-blue-400 text-white cursor-not-allowed"
+            : syncState === "success"
+              ? "bg-green-500 text-white"
+              : syncState === "error"
+                ? "bg-red-500 text-white"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
+          }`}
+      >
+        {syncState === "syncing" && (
+          <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+        )}
+
+        {syncState === "idle" && "Sync Now"}
+        {syncState === "syncing" && "Syncing..."}
+        {syncState === "success" && "Synced successfully"}
+        {syncState === "error" && "Sync failed"}
+      </button>
+
+
 
 
 
@@ -478,11 +636,11 @@ const Dashboard = () => {
         </div>
       )}
 
-      
 
-      
 
-     
+
+
+
 
 
 
@@ -503,7 +661,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
         <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
-        
+
 
         <LineChartPanel
           title="Blood Pressure Trend"
@@ -523,7 +681,7 @@ const Dashboard = () => {
       </div>
 
       <SleepChart sleepSessions={sleepSessions} />
-      <ActivityChart data={activityLogs} />
+      {/* <ActivityChart data={activityLogs} /> */}
 
 
       <div className="min-h-[40px] text-center">
