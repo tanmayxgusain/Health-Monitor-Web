@@ -60,4 +60,11 @@ export const iconMap = {
     unit: "level",
     color: "#8b5cf6",
   },
+
+  distance: {
+    title: "Distance",
+    unit: "km",
+    icon: "distance", // or the actual icon component you use
+    color: "text-blue-600", // match your style
+  },
 };

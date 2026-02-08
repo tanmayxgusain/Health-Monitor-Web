@@ -24,6 +24,8 @@ const HealthChart = ({ data = [], color = "#ef4444", metric = "Heart Rate" }) =>
         Daily {metric} Chart
       </h3>
 
+
+
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />

@@ -215,8 +215,12 @@ const LineChartPanel = ({ data, title, color }) => {
     const normalized = [...data]
       .filter((d) => d?.timestamp || d?.time)
       .map((d) => {
-        const ts = d.timestamp || d.time;
-        const epoch = new Date(ts).getTime();
+        // const ts = d.timestamp || d.time;
+        // const epoch = new Date(ts).getTime();
+
+        const ts = d.timestamp ?? d.time;
+        const epoch = typeof ts === "number" ? ts : Number(ts);
+
 
         const systolic =
           d.systolic === null || d.systolic === undefined ? undefined : Number(d.systolic);
@@ -231,7 +235,9 @@ const LineChartPanel = ({ data, title, color }) => {
     const hasS = normalized.some((d) => Number.isFinite(d.systolic));
     const hasD = normalized.some((d) => Number.isFinite(d.diastolic));
     const hasV = normalized.some((d) => Number.isFinite(d.value));
-    const bp = hasS || hasD;
+    // const bp = hasS || hasD;
+    const bp = hasS && hasD; // require both to consider it BP
+
 
     // 2) Gap-aware breaks (non-BP only)
     const GAP_THRESHOLD = 60 * MS_MIN; // break if gap > 60 minutes (single-day view)
@@ -260,7 +266,16 @@ const LineChartPanel = ({ data, title, color }) => {
     // 3) Fixed-ish ticks (regular time markers)
     const minEpoch = normalized[0]?.epoch ?? Date.now();
     const maxEpoch = normalized[normalized.length - 1]?.epoch ?? Date.now();
-    const tickList = buildTicks(minEpoch, maxEpoch, 4); // every 4 hours (clean on most screens)
+
+    // const tickList = buildTicks(minEpoch, maxEpoch, 4); // every 4 hours (clean on most screens)
+    const rangeMs = maxEpoch - minEpoch;
+    const stepHours =
+      rangeMs <= 6 * MS_HOUR ? 1 :   // <= 6 hours range → tick every hour
+        rangeMs <= 24 * MS_HOUR ? 4 :  // <= 24 hours → every 4 hours
+          12;                            // bigger → every 12 hours
+
+    const tickList = buildTicks(minEpoch, maxEpoch, stepHours);
+
 
     return {
       chartData: withGaps,
@@ -294,18 +309,65 @@ const LineChartPanel = ({ data, title, color }) => {
             type="number"
             domain={["dataMin", "dataMax"]}
             ticks={ticks}
-            tickFormatter={(epoch) => formatToIST(new Date(epoch).toISOString())}
+            interval={0}
+            minTickGap={20}
+            allowDuplicatedCategory={false}
+
+            // tickFormatter={(epoch) => formatToIST(new Date(epoch).toISOString())}
+            tickFormatter={(epoch) => formatToIST(epoch)}
+
           />
 
           <YAxis />
 
-          <Tooltip
-            labelFormatter={(epoch) => formatToIST(new Date(epoch).toISOString())}
+          {/* <Tooltip
+            // labelFormatter={(epoch) => formatToIST(new Date(epoch).toISOString())}
+            labelFormatter={(epoch) => formatToIST(epoch)}
+
             formatter={(val, name) => {
               if (val === null || val === undefined) return ["--", name];
               return [val, name];
             }}
-          />
+          /> */}
+
+          {isBP ? (
+            <Tooltip
+              isAnimationActive={false}
+              labelFormatter={(epoch) => formatToIST(epoch)}
+              content={({ active, label, payload }) => {
+                if (!active) return null;
+
+                const systolic = payload?.find((p) => p.dataKey === "systolic")?.value;
+                const diastolic = payload?.find((p) => p.dataKey === "diastolic")?.value;
+
+                return (
+                  <div className="bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-md">
+                    <div className="text-xs text-gray-500 mb-1">{formatToIST(label)}</div>
+
+                    <div className="text-sm text-gray-700">
+                      <span className="font-semibold">Systolic:</span>{" "}
+                      {Number.isFinite(systolic) ? systolic : "--"}
+                    </div>
+
+                    <div className="text-sm text-gray-700">
+                      <span className="font-semibold">Diastolic:</span>{" "}
+                      {Number.isFinite(diastolic) ? diastolic : "--"}
+                    </div>
+                  </div>
+                );
+              }}
+            />
+          ) : (
+            <Tooltip
+              labelFormatter={(epoch) => formatToIST(epoch)}
+              formatter={(val, name) => {
+                if (val === null || val === undefined) return ["--", name];
+                return [val, name];
+              }}
+            />
+          )}
+
+
 
           {/* ✅ BP-only vertical connectors (range band) */}
           {isBP && <Customized component={BPVerticalConnectors} />}
@@ -338,7 +400,7 @@ const LineChartPanel = ({ data, title, color }) => {
           )}
 
           {/* Non-BP metrics: line with gap breaks */}
-          {!isBP && hasValue && (
+          {/* {!isBP && hasValue && (
             <Line
               type="monotone"
               dataKey="value"
@@ -346,10 +408,32 @@ const LineChartPanel = ({ data, title, color }) => {
               stroke={color || "#10b981"}
               strokeWidth={2}
               dot={false}
+              // dot={/heart\s*rate|spo2|spo₂|oxygen|o2/i.test(title) ? { r: 3 } : false}
+              // activeDot={{ r: 6 }}
+
               connectNulls={false}
               isAnimationActive={false}
             />
-          )}
+          )} */}
+
+          {!isBP && hasValue && (() => {
+            const showDots = /heart\s*rate|hr\b|spo2|spo₂|oxygen|o2/i.test(title);
+            return (
+              <Line
+                type="monotone"
+                dataKey="value"
+                name={title}
+                stroke={color || "#10b981"}
+                strokeWidth={2}
+                dot={showDots ? { r: 3 } : false}
+                activeDot={{ r: 6 }}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            );
+          })()}
+
+
         </LineChart>
       </ResponsiveContainer>
     </div>

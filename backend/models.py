@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, UniqueConstraint, Index
 from database import Base
 from datetime import datetime
 from sqlalchemy.orm import relationship, declarative_base
@@ -26,6 +26,8 @@ class User(Base):
     phone = Column(String, nullable=True)
     country = Column(String, nullable=True)
     role = Column(String, default="Patient")
+    last_fit_sync_at = Column(DateTime, nullable=True)  # UTC naive datetime
+
 
     # ➕ Add these new columns:
     access_token = Column(String, nullable=True)
@@ -45,8 +47,38 @@ class User(Base):
 
 
 
+# class HealthData(Base):
+#     __tablename__ = "healthdata"
+
+#     id = Column(Integer, primary_key=True, index=True)
+#     user_id = Column(Integer, ForeignKey("users.id"))
+#     metric_type = Column(String)  # e.g., heart_rate, spo2, blood_pressure
+#     value = Column(Float, nullable=True)
+#     systolic = Column(Integer, nullable=True)
+#     diastolic = Column(Integer, nullable=True)
+#     timestamp = Column(DateTime, default=datetime.utcnow)
+#     hash = Column(String, nullable=True, index=True)
+#     activity_type = Column(String, nullable=True)
+#     user = relationship("User", back_populates="health_data")
+
+
+# class SleepSession(Base):
+#     __tablename__ = "sleep_sessions"
+
+#     id = Column(Integer, primary_key=True, index=True)
+#     user_id = Column(Integer, ForeignKey("users.id"))
+#     start_time = Column(DateTime, nullable=False)
+#     end_time = Column(DateTime, nullable=False)
+#     duration_hours = Column(Float, nullable=False)
+
+#     user = relationship("User", back_populates="sleep_sessions")
+
 class HealthData(Base):
     __tablename__ = "healthdata"
+    __table_args__ = (
+        UniqueConstraint("user_id", "metric_type", "timestamp", name="uq_healthdata_user_metric_ts"),
+        Index("ix_healthdata_user_metric_ts", "user_id", "metric_type", "timestamp"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
@@ -54,22 +86,28 @@ class HealthData(Base):
     value = Column(Float, nullable=True)
     systolic = Column(Integer, nullable=True)
     diastolic = Column(Integer, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.utcnow)  # store UTC naive
     hash = Column(String, nullable=True, index=True)
     activity_type = Column(String, nullable=True)
+
     user = relationship("User", back_populates="health_data")
 
 
 class SleepSession(Base):
     __tablename__ = "sleep_sessions"
+    __table_args__ = (
+        UniqueConstraint("user_id", "start_time", "end_time", name="uq_sleep_user_start_end"),
+        Index("ix_sleep_user_start", "user_id", "start_time"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    start_time = Column(DateTime, nullable=False)
-    end_time = Column(DateTime, nullable=False)
+    start_time = Column(DateTime, nullable=False)  # store UTC naive
+    end_time = Column(DateTime, nullable=False)    # store UTC naive
     duration_hours = Column(Float, nullable=False)
 
     user = relationship("User", back_populates="sleep_sessions")
+
 
 
 class ActivityLog(Base):

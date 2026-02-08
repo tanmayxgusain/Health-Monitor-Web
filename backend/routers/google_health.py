@@ -99,7 +99,8 @@ async def get_today_health_data(
     distance = []
 
     for rec in records:
-        ts = int(rec.timestamp.timestamp() * 1000)
+        # ts = int(rec.timestamp.timestamp() * 1000)   #old code
+        ts = int(rec.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)  #new code
 
         if rec.metric_type == "heart_rate" and rec.value is not None:
             heart_rate.append({"timestamp": ts, "value": rec.value})
@@ -265,7 +266,9 @@ async def get_health_data_history(
     records: List[HealthData] = result.scalars().all()
 
     for rec in records:
-        ts = int(rec.timestamp.timestamp() * 1000)
+        # ts = int(rec.timestamp.timestamp() * 1000)
+        ts = int(rec.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
+
         if rec.metric_type == "heart_rate" and rec.value is not None:
             heart_rate.append({"timestamp": ts, "value": rec.value})
         elif rec.metric_type == "spo2" and rec.value is not None:
