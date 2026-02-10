@@ -1,20 +1,18 @@
 # backend/routers/google_auth.py
 
 from datetime import datetime, time, timedelta
-from fastapi import APIRouter, HTTPException, Request, Depends, Query
+from fastapi import APIRouter, HTTPException, Request, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 import httpx
 import os
-from sqlalchemy.orm import Session
 from database import get_db
-from models import User, HealthData
+from models import User
 
 from urllib.parse import urlencode
 
 from dotenv import load_dotenv
-from typing import Optional, List
 
 
 load_dotenv()
@@ -25,12 +23,12 @@ GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_FIT_API_URL = "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
 
-# Replace these with your actual credentials
+
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 # REDIRECT_URI = "http://localhost:8000/auth/google/callback"
 REDIRECT_URI = os.getenv("REDIRECT_URI")
-FRONTEND_URL = os.getenv("FRONTEND_URL")  # add this at the top too
+FRONTEND_URL = os.getenv("FRONTEND_URL")  
 
 
 SCOPES = [
@@ -81,7 +79,6 @@ async def login():
 
 
 
-
 @router.get("/auth/google/callback")
 async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     code = request.query_params.get("code")
@@ -100,7 +97,6 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     print("REDIRECT_URI =", os.getenv("REDIRECT_URI"))
     print("FRONTEND_URL =", os.getenv("FRONTEND_URL"))
 
-    # token_response = requests.post(token_url, data=token_data)
     async with httpx.AsyncClient() as client:
         token_response = await client.post(GOOGLE_TOKEN_URL, data=token_data)
         token_json = token_response.json()
@@ -116,7 +112,7 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
     headers = {"Authorization": f"Bearer {access_token}"}
 
-    # user_info_response = requests.get(user_info_url, headers=headers)
+
     async with httpx.AsyncClient() as client:
         user_info_response = await client.get(user_info_url, headers=headers)
         user_info = user_info_response.json()
@@ -132,7 +128,7 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     
 
     # Step 4: Save user or get existing user
-    # user = db.query(User).filter(User.email == email).first()
+    
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
     
@@ -153,21 +149,13 @@ async def google_callback(request: Request, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
 
-
-    # Optional: Create a JWT token or session here
-
-    # frontend_url = f"http://localhost:3000/oauth-success?email={email}"
-    # return RedirectResponse(frontend_url)
     frontend_url = f"{FRONTEND_URL}/oauth-success?email={email}"
-    
-
     return RedirectResponse(frontend_url)
 
 
 
 @router.get("/auth/fitness/heart-rate")
 async def get_heart_rate_data(db:AsyncSession = Depends(get_db), email: str = "testuser@example.com"):
-    # user = db.query(User).filter(User.email == email).first()
 
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
@@ -179,7 +167,6 @@ async def get_heart_rate_data(db:AsyncSession = Depends(get_db), email: str = "t
         "Content-Type": "application/json"
     }
 
-    # dataset = "0000000000000-" + str(int(time.time() * 1000000000))  # nanosecond format
 
     dataset = f"0000000000000-{int(time.time() * 1e9)}"  # nanosecond format
     url = f"https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
@@ -193,7 +180,6 @@ async def get_heart_rate_data(db:AsyncSession = Depends(get_db), email: str = "t
         "endTimeMillis": int(datetime.utcnow().timestamp() * 1000)
     }
 
-    # response = requests.post(url, headers=headers, json=body)
     async with httpx.AsyncClient() as client:
         response = await client.post(url, headers=headers, json=body)
 
@@ -206,7 +192,7 @@ async def get_heart_rate_data(db:AsyncSession = Depends(get_db), email: str = "t
 
 GOOGLE_FIT_API_URL = "https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate"
 
-# Define data source types
+
 DATA_TYPES = {
     "heart_rate": "com.google.heart_rate.bpm",
     "blood_pressure": "com.google.blood_pressure",
@@ -221,16 +207,10 @@ DATA_TYPES = {
 }
 
 
-
-
-
-
 def build_request_body(data_type, start_time_millis, end_time_millis):
     return {
         "aggregateBy": [{
             "dataTypeName": data_type
-            # "dataTypeName": data_type["dataTypeName"],
-            # "dataSourceId": data_type["dataSourceId"]
         }],
         "bucketByTime": { "durationMillis": 3600000 },  # hourly buckets
         "startTimeMillis": start_time_millis,

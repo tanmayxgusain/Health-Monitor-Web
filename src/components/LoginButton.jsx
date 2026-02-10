@@ -1,41 +1,42 @@
 // src/components/LoginButton.jsx
+import React, { useMemo, useState } from "react";
 
-import React, { useState } from "react";
-
-const BACKEND_URL =
-  process.env.REACT_APP_BACKEND_URL || "http://localhost:8000";
-
-const LoginButton = () => {
+const LoginButton = ({ onStart }) => {
   const [loading, setLoading] = useState(false);
+
+  const backendUrl = useMemo(() => {
+    const url =
+      process.env.REACT_APP_API_URL ||
+      process.env.REACT_APP_BACKEND_URL ||
+      "http://localhost:8000";
+    return url.replace(/\/+$/, "");
+  }, []);
 
   const handleGoogleLogin = () => {
     if (loading) return;
     setLoading(true);
-    window.location.href = `${BACKEND_URL}/auth/google/login`;
+    onStart?.(); 
+
+    window.location.href = `${backendUrl}/auth/google/login`;
   };
 
   return (
     <button
       onClick={handleGoogleLogin}
       disabled={loading}
-      className={`
-        w-full flex items-center justify-center gap-3
-        border rounded-xl px-4 py-3
-        bg-white text-gray-800 font-semibold
-        shadow-sm
-        hover:bg-gray-50 hover:shadow
-        active:scale-[0.99]
-        transition
-        disabled:opacity-60 disabled:cursor-not-allowed
-      `}
+      aria-busy={loading}
+      className={[
+        "w-full flex items-center justify-center gap-3",
+        "rounded-2xl px-5 py-3.5",
+        "border border-gray-200 bg-white",
+        "text-gray-900 font-semibold shadow-sm transition",
+        "hover:bg-gray-50 hover:border-gray-300",
+        "active:scale-[0.99]",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
+        "disabled:opacity-60 disabled:cursor-not-allowed",
+      ].join(" ")}
     >
-      {/* Google icon */}
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 48 48"
-        aria-hidden="true"
-      >
+      <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
         <path
           fill="#EA4335"
           d="M24 9.5c3.54 0 6.7 1.22 9.2 3.6l6.9-6.9C35.9 2.4 30.4 0 24 0 14.6 0 6.5 5.4 2.6 13.3l8.1 6.3C12.7 13.2 17.9 9.5 24 9.5z"
@@ -54,9 +55,21 @@ const LoginButton = () => {
         />
       </svg>
 
-      <span>
-        {loading ? "Redirecting…" : "Continue with Google"}
+      <span className={loading ? "opacity-70" : ""}>
+        {loading ? "Connecting…" : "Continue with Google"}
       </span>
+
+      {loading ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" className="animate-spin">
+          <path
+            d="M12 2a10 10 0 1 0 10 10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          />
+        </svg>
+      ) : null}
     </button>
   );
 };

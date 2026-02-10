@@ -21,7 +21,7 @@ BASE_PATH = os.path.join(BASE_DIR, "ml_models", "personalized", "users")
 
 
 
-# Retrain policy (Option C)
+
 RETRAIN_MIN_NEW_WINDOWS = 50      # retrain if >= 50 new 5-min windows
 RETRAIN_COOLDOWN_HOURS = 12       # don't retrain more often than every 12 hours
 MIN_WINDOWS_TO_TRAIN = 10         # don't train at all unless baseline >= 10 windows
@@ -52,11 +52,11 @@ def _hours_since(iso_ts: str) -> float:
         now = datetime.now(timezone.utc)
         return (now - dt.astimezone(timezone.utc)).total_seconds() / 3600.0
     except Exception:
-        return 1e9  # treat as very old
+        return 1e9  
     
     
 async def get_current_window_count(user_id: int, db: AsyncSession) -> int:
-    df = await fetch_user_data(user_id, db)  # windowed dataframe
+    df = await fetch_user_data(user_id, db)  
     return int(len(df)) if df is not None else 0
 
 async def should_retrain_user_model(user_id: int, db: AsyncSession) -> bool:
@@ -110,7 +110,7 @@ async def fetch_user_data(user_id: int, db: AsyncSession):
     df["timestamp"] = pd.to_datetime(df["timestamp"])
     df.set_index("timestamp", inplace=True)
 
-    # 🔥 5-minute window aggregation
+    # 5-minute window aggregation
     windowed = df.resample("5min").agg({
         "heart_rate": "mean",
         "spo2": "min",
@@ -130,7 +130,7 @@ async def train_user_model(user_id: int, db: AsyncSession):
         print(f" Not enough baseline windows to train user {user_id}. windows={len(df)}")
         return
 
-    print("✅ TRAIN DEBUG")
+    print("TRAIN DEBUG")
     print("CWD:", os.getcwd())
     print("BASE_PATH:", os.path.abspath(BASE_PATH))
     print("user_id:", user_id)
@@ -145,18 +145,18 @@ async def train_user_model(user_id: int, db: AsyncSession):
         return
 
 
-    # 1️⃣ Scale
+    # 1️ Scale
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(df)
 
-    # 2️⃣ Train Isolation Forest (unsupervised anomalies)
+    # 2️ Train Isolation Forest (unsupervised anomalies)
     iso_model = IsolationForest(contamination=0.05, random_state=42)
     iso_model.fit(X_scaled)
 
-    # 3️⃣ Optional: Supervised model with fake anomalies
+    
     df_supervised = df.copy()
     df_supervised["label"] = 0
-    # inject fake extreme anomalies
+    
     n_anomalies = max(5, int(len(df) * 0.05))
     for col in ["heart_rate", "spo2", "systolic_bp", "diastolic_bp"]:
         df_supervised.loc[df_supervised.sample(n=n_anomalies).index, col] *= 1.5
@@ -167,16 +167,16 @@ async def train_user_model(user_id: int, db: AsyncSession):
     sup_model = RandomForestClassifier(n_estimators=100, random_state=42)
     sup_model.fit(X_sup, y_sup)
 
-    # 4️⃣ Create user folder
+    # 4️ Create user folder
     user_folder = os.path.join(BASE_PATH, f"user_{user_id}")
     os.makedirs(user_folder, exist_ok=True)
 
-    # 5️⃣ Save models & scaler
+    # 5️ Save models & scaler
     joblib.dump(iso_model, os.path.join(user_folder, "unsupervised_model.pkl"))
     joblib.dump(sup_model, os.path.join(user_folder, "supervised_model.pkl"))
     joblib.dump(scaler, os.path.join(user_folder, "scaler.pkl"))
 
-    # 6️⃣ Save metadata
+    # 6️ Save metadata
     metadata = {
         "last_trained": datetime.now(timezone.utc).isoformat(),
         "n_windows": int(len(df)),
@@ -187,4 +187,4 @@ async def train_user_model(user_id: int, db: AsyncSession):
     with open(os.path.join(user_folder, "metadata.json"), "w") as f:
         json.dump(metadata, f, indent=4)
 
-    print(f"✅ Trained models saved for user {user_id}")
+    print(f" Trained models saved for user {user_id}")

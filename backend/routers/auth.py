@@ -1,21 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
 from database import  get_db
-import models, schemas
 import bcrypt
-from schemas import UserCreate, UserLogin
+from schemas import UserLogin
 from models import User
-from database import async_session
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
-
-
-
 
 @router.post("/login")
 async def login(user: UserLogin, db: AsyncSession = Depends(get_db)):

@@ -1,26 +1,13 @@
+// src/pages/Dashboard.jsx
 
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
 import axios from "axios";
 
-
 import PeriodSelector from "../components/PeriodSelector";
-
-
-
 import LineChartPanel from "../components/LineChartPanel";
-
 import GroupedHealthCards from "../components/GroupedHealthCards";
-
-
-
 import SleepChart from "../components/SleepChart";
-
-
-
-import ActivityChart from "../components/ActivityChart";
-
 
 
 const formatDuration = (hours) => {
@@ -28,47 +15,21 @@ const formatDuration = (hours) => {
   return `${parseFloat(hours).toFixed(1)} hrs`;
 };
 
-
-
 const Dashboard = () => {
   const [period, setPeriod] = useState("Today");
   const [customStart, setCustomStart] = useState(null);
 
-
-  const selectedDate = (() => {
-    const now = new Date();
-    const offsetMs = 5.5 * 60 * 60 * 1000;
-    const istNow = new Date(now.getTime() + offsetMs);
-
-    if (period === "Today") {
-      return istNow.toISOString().split("T")[0];
-    } else if (period === "Yesterday") {
-      istNow.setDate(istNow.getDate() - 1);
-      return istNow.toISOString().split("T")[0];
-    } else if (period === "Custom" && customStart) {
-      return customStart;
-    }
-    return null;
-  })();
-
-
-
   const navigate = useNavigate();
   const email = localStorage.getItem("user_email");
 
-  const [heartRateData, setHeartRateData] = useState("--");
-  const [bpData, setBpData] = useState("--");
-  const [spo2Data, setSpo2Data] = useState("--");
   const [sleepSessions, setSleepSessions] = useState([]);
   const [userName, setUserName] = useState("");
   const [activityLogs, setActivityLogs] = useState([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncState, setSyncState] = useState("idle");   // idle | syncing | success | error
 
-
-
-
-
+  const [syncState, setSyncState] = useState("idle"); 
+  const [lastSyncedAt, setLastSyncedAt] = useState(
+    localStorage.getItem("last_synced_at")
+  );
 
   const [history, setHistory] = useState({
     heart_rate: [],
@@ -89,32 +50,28 @@ const Dashboard = () => {
     distance: "--",
     calories: "--",
     sleep: "--",
-    stress: "--"
+    stress: "--",
   });
 
-
-
-
-
-  // ✅ Integer sum – use for steps, calories
+  
   const getSumInt = (data) => {
     if (!data || data.length === 0) return "--";
     const sum = data.reduce((acc, val) => acc + (val.value || 0), 0);
     return Math.round(sum);
   };
-  // ✅ Float sum – use for distance, sleep (raw)
+
   const getSumFloat = (data) => {
     if (!data || data.length === 0) return 0;
-    return data.reduce((acc, val) => acc + (val.value || val.duration_hours || 0), 0);
+    return data.reduce(
+      (acc, val) => acc + (val.value || val.duration_hours || 0),
+      0
+    );
   };
 
-
-  const getSleepDurationSum = (sessions) => {
-    if (!sessions || sessions.length === 0) return 0;
-    return sessions.reduce((acc, session) => acc + (session.duration_hours || 0), 0);
-  };
-
-  const toNums = (arr) => (arr || []).map(x => Number(x?.value)).filter(v => Number.isFinite(v));
+  const toNums = (arr) =>
+    (arr || [])
+      .map((x) => Number(x?.value))
+      .filter((v) => Number.isFinite(v));
 
   const getMin = (data) => {
     const nums = toNums(data);
@@ -145,115 +102,74 @@ const Dashboard = () => {
 
   const getLatestBP = (bpArr) => {
     const arr = (bpArr || [])
-      .filter(d => d?.systolic != null && d?.diastolic != null && d?.timestamp)
+      .filter((d) => d?.systolic != null && d?.diastolic != null && d?.timestamp)
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     if (!arr.length) return "--";
     const last = arr[arr.length - 1];
-    return `${Math.round(Number(last.systolic))}/${Math.round(Number(last.diastolic))}`;
+    return `${Math.round(Number(last.systolic))}/${Math.round(
+      Number(last.diastolic)
+    )}`;
   };
 
   const getAvgBP = (bpArr) => {
-    const arr = (bpArr || []).filter(d => d?.systolic != null && d?.diastolic != null);
+    const arr = (bpArr || []).filter(
+      (d) => d?.systolic != null && d?.diastolic != null
+    );
     if (!arr.length) return "--";
     const s = arr.reduce((a, d) => a + Number(d.systolic), 0) / arr.length;
     const di = arr.reduce((a, d) => a + Number(d.diastolic), 0) / arr.length;
     return `${Math.round(s)}/${Math.round(di)}`;
   };
 
-
-
-
-
-
-
-
-
-  const getAverage = (data) => {
-    if (!data || data.length === 0) return "--";
-    console.log("📈 Computing avg from:", data);
-
-    const sum = data.reduce((acc, val) => acc + (val.value || 0), 0);
-    return Math.round(sum / data.length);
-  };
-
-  const getAverageBP = (data) => {
-    if (!data || data.length === 0) return "--";
-    console.log("📊 Raw BP:", data);
-    const systolic = Math.round(
-      data.reduce((acc, val) => acc + (val.systolic || 0), 0) / data.length
-    );
-    const diastolic = Math.round(
-      data.reduce((acc, val) => acc + (val.diastolic || 0), 0) / data.length
-    );
-    return `${systolic}/${diastolic}`;
-  };
-
-
-  // const handleSync = async () => {
-  //   try {
-  //     await axios.post("http://localhost:8000/google/sync", {
-  //       // await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
-  //       user_email: email,
-  //       days_back: 7   // or 30, or whatever you want
-  //     });
-  //     alert("Synced successfully");
-  //     window.location.reload();
-  //   } catch (err) {
-  //     alert("Sync failed");
-  //     console.error(err);
-  //   }
-  // };
-
+  // ---------- sync ----------
   const handleSync = async () => {
     if (syncState !== "idle") return;
 
     try {
       setSyncState("syncing");
 
-      await axios.post("http://localhost:8000/google/sync", {
-        // await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
+      // await axios.post("http://localhost:8000/google/sync", {
+      await axios.post("https://health-monitor-djcv.onrender.com/google/sync", {
         user_email: email,
-        days_back: 7
+        days_back: 7,
       });
 
       setSyncState("success");
 
-      // Refresh data instead of full reload (better UX)
-      // If you still want reload, keep it here
-      // window.location.reload();
+     
+      const nowIso = new Date().toISOString();
+      localStorage.setItem("last_synced_at", nowIso);
+      setLastSyncedAt(nowIso);
 
-      setTimeout(() => {
-        setSyncState("idle");
-      }, 5000);
+      setTimeout(() => setSyncState("idle"), 5000);
     } catch (err) {
       console.error(err);
       setSyncState("error");
-
-      setTimeout(() => {
-        setSyncState("idle");
-      }, 5000);
+      setTimeout(() => setSyncState("idle"), 5000);
     }
   };
 
-
-
-
-
-
-
-
+  // ---------- auth redirect ----------
   useEffect(() => {
     if (!email) navigate("/login");
   }, []);
 
+ 
+  useEffect(() => {
+    if (period !== "Custom") setCustomStart(null);
+  }, [period]);
 
+  // ---------- trends tab (mobile) ----------
+  const [trendTab, setTrendTab] = useState("Heart Rate");
+  useEffect(() => {
+    setTrendTab("Heart Rate");
+  }, [period, customStart]);
 
-
+  // ---------- fetch data ----------
   useEffect(() => {
     const fetchHealthData = async () => {
       if (!email) return;
 
-      // Reset state
       setHistory({
         heart_rate: [],
         spo2: [],
@@ -276,421 +192,470 @@ const Dashboard = () => {
         stress: "--",
       });
 
-      // Determine period
-      const today = new Date();
       let startDate;
+
       try {
-        const sleepSessionRes = await axios.get("http://localhost:8000/sleep-sessions", {
-          // const sleepSessionRes = await axios.get("https://health-monitor-djcv.onrender.com/sleep-sessions", {
-          params: {
-            user_email: email,
-            days: 60
-          }
+        // const sleepSessionRes = await axios.get("http://localhost:8000/sleep-sessions", {
+        const sleepSessionRes = await axios.get("https://health-monitor-djcv.onrender.com/sleep-sessions", {
+          params: { user_email: email, days: 60 },
         });
-        setSleepSessions(sleepSessionRes.data.sleep_sessions); // ⬅ Make sure you’ve defined this state
+        setSleepSessions(sleepSessionRes.data.sleep_sessions);
 
         if (period === "Today") {
-
-
-
-
-
-          // Convert to IST (UTC+5:30)
           const now = new Date();
-          const offsetMs = 5.5 * 60 * 60 * 1000; // 5:30 in milliseconds
+          const offsetMs = 5.5 * 60 * 60 * 1000;
           const istNow = new Date(now.getTime() + offsetMs);
-          const startDate = istNow.toISOString().split("T")[0];
-
-
-
-          const res = await axios.get("http://localhost:8000/healthdata/history", {
-            // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
-            params: {
-              user_email: email,
-              start_date: startDate,
-              end_date: startDate,
-            }
-          });
-
-          const data = res.data;
-          console.log("Fetched history data:", data);
-          console.log("[🚦 Dashboard] period:", period, "→ startDate:", startDate);
-
-          console.log("[🩸 BP Raw from DB]", history.blood_pressure);
-
-
-
-          // Set chart data
-          setHistory({
-            heart_rate: data.heart_rate || [],
-            spo2: data.spo2 || [],
-            blood_pressure: data.blood_pressure || [],
-            sleep: data.sleep || [],
-            stress: data.stress || [],
-            steps: data.steps || [],
-            distance: data.distance || [],
-            calories: data.calories || [],
-
-          });
-
-
-          // Compute average
-
-          // setAverageMetrics({
-          //   heart_rate: data.heart_rate?.length ? getAverage(data.heart_rate) : "--",
-          //   spo2: data.spo2?.length ? getAverage(data.spo2) : "--",
-          //   blood_pressure: data.blood_pressure?.length ? getAverageBP(data.blood_pressure) : "--",
-          //   stress: data.stress?.length ? getAverage(data.stress) : "--",
-          //   steps: data.steps?.length ? getSumInt(data.steps) : "--",
-          //   calories: data.calories?.length ? getSumInt(data.calories) : "--",
-          //   // distance: data.distance?.length ? getSum(data.distance) : "--",
-          //   distance: data.distance?.length ? getSumFloat(data.distance).toFixed(2) : "--",
-
-
-
-          //   sleep: (() => {
-          //     const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-
-          //     // Treat selected startDate as IST midnight
-          //     const targetIST = new Date(startDate + "T00:00:00+05:30");
-          //     const nextIST = new Date(targetIST.getTime() + 24 * 60 * 60 * 1000);
-
-          //     const filteredSleepSessions = sleepSessionRes.data.sleep_sessions.filter(session => {
-          //       const sessionStart = new Date(session.start_time); // UTC from backend
-          //       const sessionEnd = new Date(session.end_time);     // UTC from backend
-
-          //       return sessionStart < nextIST && sessionEnd > targetIST;
-          //     });
-
-          //     console.log(`🛌 Filtered sessions for ${startDate}`, filteredSleepSessions);
-          //     console.log("Sleep sessions received:", sleepSessions);
-
-
-          //     return filteredSleepSessions.length
-          //       ? formatDuration(getSumFloat(filteredSleepSessions))
-          //       : "--";
-          //   })(),
-
-
-
-
-
-          // });
-
-          setAverageMetrics({
-            heart_rate: data.heart_rate?.length
-              ? { primary: getMedian(data.heart_rate), unit: "bpm", subtitle: `Low ${getMin(data.heart_rate)} • High ${getMax(data.heart_rate)}` }
-              : { primary: "--", unit: "bpm", subtitle: "" },
-
-            spo2: data.spo2?.length
-              ? { primary: getMin(data.spo2), unit: "%", subtitle: `Avg ${getAvgRounded(data.spo2)}%` }
-              : { primary: "--", unit: "%", subtitle: "" },
-
-            blood_pressure: data.blood_pressure?.length
-              ? { primary: getLatestBP(data.blood_pressure), unit: "mmHg", subtitle: `Today avg ${getAvgBP(data.blood_pressure)}` }
-              : { primary: "--", unit: "mmHg", subtitle: "" },
-
-            stress: data.stress?.length
-              ? { primary: getMedian(data.stress), unit: "level", subtitle: `Peak ${getMax(data.stress)}` }
-              : { primary: "--", unit: "level", subtitle: "" },
-
-            steps: data.steps?.length
-              ? { primary: getSumInt(data.steps), unit: "", subtitle: "Today total" }
-              : { primary: "--", unit: "", subtitle: "" },
-
-            calories: data.calories?.length
-              ? { primary: getSumInt(data.calories), unit: "kcal", subtitle: "Today total" }
-              : { primary: "--", unit: "kcal", subtitle: "" },
-
-            distance: data.distance?.length
-              ? { primary: `${getSumFloat(data.distance).toFixed(2)}`, unit: "km", subtitle: "Today total" }
-              : { primary: "--", unit: "km", subtitle: "" },
-
-            sleep: (() => {
-              const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-              const targetIST = new Date(startDate + "T00:00:00+05:30");
-              const nextIST = new Date(targetIST.getTime() + 24 * 60 * 60 * 1000);
-
-              const filteredSleepSessions = sleepSessionRes.data.sleep_sessions.filter(session => {
-                const sessionStart = new Date(session.start_time);
-                const sessionEnd = new Date(session.end_time);
-                return sessionStart < nextIST && sessionEnd > targetIST;
-              });
-
-              return filteredSleepSessions.length
-                ? { primary: formatDuration(getSumFloat(filteredSleepSessions)), unit: "", subtitle: "Last night" }
-                : { primary: "--", unit: "", subtitle: "" };
-            })(),
-          });
-
-
-
-
-
-        } else {
-          let startDate;
-          if (period === "Yesterday") {
-
-
-
-            const now = new Date();
-            const offsetMs = 5.5 * 60 * 60 * 1000;
-            const istNow = new Date(now.getTime() + offsetMs);
-            istNow.setDate(istNow.getDate() - 1);
-            startDate = istNow.toISOString().split("T")[0];
-
-
-
-          } else if (period === "Custom") {
-            if (!customStart) return;
-            // startDate = new Date(customStart).toISOString().split("T")[0];
-            startDate = customStart;
-          }
-
-
-          const res = await axios.get("http://localhost:8000/healthdata/history", {
-            // const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
-            params: {
-              user_email: email,
-              start_date: startDate,
-              end_date: startDate, // single date for 1-day data
-            },
-          });
-
-          const data = res.data;
-
-
-          setHistory({
-            heart_rate: data.heart_rate || [],
-            spo2: data.spo2 || [],
-            blood_pressure: data.blood_pressure || [],
-            steps: data.steps || [],
-            distance: data.distance || [],
-            calories: data.calories || [],
-            sleep: data.sleep || [],
-            stress: data.stress || [],
-          });
-
-          setAverageMetrics({
-            heart_rate: data.heart_rate?.length
-              ? { primary: getMedian(data.heart_rate), unit: "bpm", subtitle: `Low ${getMin(data.heart_rate)} • High ${getMax(data.heart_rate)}` }
-              : { primary: "--", unit: "bpm", subtitle: "" },
-
-            spo2: data.spo2?.length
-              ? { primary: getMin(data.spo2), unit: "%", subtitle: `Avg ${getAvgRounded(data.spo2)}%` }
-              : { primary: "--", unit: "%", subtitle: "" },
-
-            blood_pressure: data.blood_pressure?.length
-              ? { primary: getLatestBP(data.blood_pressure), unit: "mmHg", subtitle: `Today avg ${getAvgBP(data.blood_pressure)}` }
-              : { primary: "--", unit: "mmHg", subtitle: "" },
-
-            stress: data.stress?.length
-              ? { primary: getMedian(data.stress), unit: "level", subtitle: `Peak ${getMax(data.stress)}` }
-              : { primary: "--", unit: "level", subtitle: "" },
-
-            steps: data.steps?.length
-              ? { primary: getSumInt(data.steps), unit: "", subtitle: "Today total" }
-              : { primary: "--", unit: "", subtitle: "" },
-
-            calories: data.calories?.length
-              ? { primary: getSumInt(data.calories), unit: "kcal", subtitle: "Today total" }
-              : { primary: "--", unit: "kcal", subtitle: "" },
-
-            distance: data.distance?.length
-              ? { primary: `${getSumFloat(data.distance).toFixed(2)}`, unit: "km", subtitle: "Today total" }
-              : { primary: "--", unit: "km", subtitle: "" },
-
-            sleep: (() => {
-              const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-              const targetIST = new Date(startDate + "T00:00:00+05:30");
-              const nextIST = new Date(targetIST.getTime() + 24 * 60 * 60 * 1000);
-
-              const filteredSleepSessions = sleepSessionRes.data.sleep_sessions.filter(session => {
-                const sessionStart = new Date(session.start_time);
-                const sessionEnd = new Date(session.end_time);
-                return sessionStart < nextIST && sessionEnd > targetIST;
-              });
-
-              return filteredSleepSessions.length
-                ? { primary: formatDuration(getSumFloat(filteredSleepSessions)), unit: "", subtitle: "Last night" }
-                : { primary: "--", unit: "", subtitle: "" };
-            })(),
-          });
-
+          startDate = istNow.toISOString().split("T")[0];
+        } else if (period === "Yesterday") {
+          const now = new Date();
+          const offsetMs = 5.5 * 60 * 60 * 1000;
+          const istNow = new Date(now.getTime() + offsetMs);
+          istNow.setDate(istNow.getDate() - 1);
+          startDate = istNow.toISOString().split("T")[0];
+        } else if (period === "Custom") {
+          if (!customStart) return;
+          startDate = customStart;
         }
-        // 🟨 Fetch Sleep Sessions for bar chart (7-day graph)
 
+        // const res = await axios.get("http://localhost:8000/healthdata/history", {
+        const res = await axios.get("https://health-monitor-djcv.onrender.com/healthdata/history", {
+          params: { user_email: email, start_date: startDate, end_date: startDate },
+        });
+
+        const data = res.data;
+
+        setHistory({
+          heart_rate: data.heart_rate || [],
+          spo2: data.spo2 || [],
+          blood_pressure: data.blood_pressure || [],
+          sleep: data.sleep || [],
+          stress: data.stress || [],
+          steps: data.steps || [],
+          distance: data.distance || [],
+          calories: data.calories || [],
+        });
+
+        setAverageMetrics({
+          heart_rate: data.heart_rate?.length
+            ? {
+                primary: getMedian(data.heart_rate),
+                unit: "bpm",
+                subtitle: `Low ${getMin(data.heart_rate)} • High ${getMax(
+                  data.heart_rate
+                )}`,
+              }
+            : { primary: "--", unit: "bpm", subtitle: "" },
+
+          spo2: data.spo2?.length
+            ? {
+                primary: getMin(data.spo2),
+                unit: "%",
+                subtitle: `Avg ${getAvgRounded(data.spo2)}%`,
+              }
+            : { primary: "--", unit: "%", subtitle: "" },
+
+          blood_pressure: data.blood_pressure?.length
+            ? {
+                primary: getLatestBP(data.blood_pressure),
+                unit: "mmHg",
+                subtitle: `Today avg ${getAvgBP(data.blood_pressure)}`,
+              }
+            : { primary: "--", unit: "mmHg", subtitle: "" },
+
+          stress: data.stress?.length
+            ? {
+                primary: getMedian(data.stress),
+                unit: "level",
+                subtitle: `Peak ${getMax(data.stress)}`,
+              }
+            : { primary: "--", unit: "level", subtitle: "" },
+
+          steps: data.steps?.length
+            ? { primary: getSumInt(data.steps), unit: "", subtitle: "Today total" }
+            : { primary: "--", unit: "", subtitle: "" },
+
+          calories: data.calories?.length
+            ? {
+                primary: getSumInt(data.calories),
+                unit: "kcal",
+                subtitle: "Today total",
+              }
+            : { primary: "--", unit: "kcal", subtitle: "" },
+
+          distance: data.distance?.length
+            ? {
+                primary: `${getSumFloat(data.distance).toFixed(2)}`,
+                unit: "km",
+                subtitle: "Today total",
+              }
+            : { primary: "--", unit: "km", subtitle: "" },
+
+          sleep: (() => {
+            const targetIST = new Date(startDate + "T00:00:00+05:30");
+            const nextIST = new Date(targetIST.getTime() + 24 * 60 * 60 * 1000);
+
+            const filteredSleepSessions = sleepSessionRes.data.sleep_sessions.filter(
+              (session) => {
+                const sessionStart = new Date(session.start_time);
+                const sessionEnd = new Date(session.end_time);
+                return sessionStart < nextIST && sessionEnd > targetIST;
+              }
+            );
+
+            return filteredSleepSessions.length
+              ? {
+                  primary: formatDuration(getSumFloat(filteredSleepSessions)),
+                  unit: "",
+                  subtitle: "Last night",
+                }
+              : { primary: "--", unit: "", subtitle: "" };
+          })(),
+        });
       } catch (err) {
         console.error("History DB fetch error:", err);
       }
 
-      // Fetch activity logs
       try {
-        const actRes = await axios.get("http://localhost:8000/activity-logs", {
-          // const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
-          params: {
-            user_email: email,
-            days: 7
-          }
+        // const actRes = await axios.get("http://localhost:8000/activity-logs", {
+        const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
+          params: { user_email: email, days: 7 },
         });
         setActivityLogs(actRes.data || []);
       } catch (err) {
         console.error("Failed to fetch activity logs:", err);
       }
-
     };
 
     fetchHealthData();
   }, [period, customStart]);
 
-
-
-
-
-
-
+  // ---------- user name ----------
   useEffect(() => {
     const fetchUserName = async () => {
       if (!email) return;
-
       try {
-        const res = await axios.get(`http://localhost:8000/users/profile?email=${email}`);
-        // const res = await axios.get(`https://health-monitor-djcv.onrender.com/users/profile?email=${email}`);
-        const userData = res.data;
-        setUserName(userData.name || "User");  // fallback to "User"
+        // const res = await axios.get(
+        //   `http://localhost:8000/users/profile?email=${email}`
+        // );
+        const res = await axios.get(`https://health-monitor-djcv.onrender.com/users/profile?email=${email}`);
+        setUserName(res.data?.name || "User");
       } catch (err) {
         console.error("Failed to fetch user name:", err);
       }
     };
-
     fetchUserName();
   }, []);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
   return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Sticky Premium Header */}
+      <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs text-gray-500">
+                {new Date().toLocaleDateString("en-IN", {
+                  weekday: "long",
+                  day: "2-digit",
+                  month: "short",
+                })}
+              </div>
+              <div className="text-lg sm:text-xl font-extrabold text-gray-900 truncate">
+                Hi, {userName || "User"}
+              </div>
+            </div>
 
+            <div className="flex items-center gap-3 shrink-0">
+              
+              <div className="flex flex-col items-end leading-tight">
+                <span
+                  className={[
+                    "px-3 py-1 rounded-full border text-xs font-semibold",
+                    syncState === "syncing"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : syncState === "success"
+                      ? "bg-green-50 text-green-700 border-green-200"
+                      : syncState === "error"
+                      ? "bg-red-50 text-red-700 border-red-200"
+                      : "bg-gray-50 text-gray-700 border-gray-200",
+                  ].join(" ")}
+                >
+                  {syncState === "syncing"
+                    ? "Syncing"
+                    : syncState === "success"
+                    ? "Synced"
+                    : syncState === "error"
+                    ? "Failed"
+                    : "Ready"}
+                </span>
 
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between bg-white shadow p-4 rounded">
-        <h1 className="text-xl font-bold text-green-700">Smart Health Monitor</h1>
-        <p className="text-sm text-gray-500">Welcome, {userName}</p>
-      </div>
+                {lastSyncedAt && syncState !== "syncing" && (
+                  <span className="mt-0.5 text-[11px] text-gray-400">
+                    Last synced{" "}
+                    {new Date(lastSyncedAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                )}
+              </div>
 
-      <h2 className="text-2xl font-bold text-gray-800">Health Dashboard</h2>
+              
+              <button
+                onClick={handleSync}
+                disabled={syncState !== "idle"}
+                className={[
+                  "px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold shadow-sm transition",
+                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
+                  syncState === "syncing"
+                    ? "bg-blue-500 text-white cursor-not-allowed"
+                    : syncState === "success"
+                    ? "bg-green-600 text-white"
+                    : syncState === "error"
+                    ? "bg-red-600 text-white"
+                    : "bg-blue-600 hover:bg-blue-700 text-white",
+                ].join(" ")}
+              >
+                {syncState === "syncing" && (
+                  <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                )}
 
-      {/* <button onClick={handleSync} className="text-sm px-3 py-1 bg-blue-500 text-white rounded">Sync Now</button> */}
-
-      <button
-        onClick={handleSync}
-        disabled={syncState !== "idle"}
-        className={`text-sm px-4 py-2 rounded flex items-center gap-2 font-medium transition-colors
-    ${syncState === "syncing"
-            ? "bg-blue-400 text-white cursor-not-allowed"
-            : syncState === "success"
-              ? "bg-green-500 text-white"
-              : syncState === "error"
-                ? "bg-red-500 text-white"
-                : "bg-blue-500 hover:bg-blue-600 text-white"
-          }`}
-      >
-        {syncState === "syncing" && (
-          <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-        )}
-
-        {syncState === "idle" && "Sync Now"}
-        {syncState === "syncing" && "Syncing..."}
-        {syncState === "success" && "Synced successfully"}
-        {syncState === "error" && "Sync failed"}
-      </button>
-
-
-
-
-
-
-      <PeriodSelector period={period} setPeriod={setPeriod} />
-      {period === "Custom" && (
-        <div className="flex flex-col sm:flex-row items-center gap-4">
-          <div>
-            <label className="block text-sm">Select Date:</label>
-            <input
-              type="date"
-              value={customStart || ""}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="border rounded px-2 py-1"
-
-            />
+                {syncState === "idle" && "Sync Now"}
+                {syncState === "syncing" && "Syncing…"}
+                {syncState === "success" && "Synced successfully"}
+                {syncState === "error" && "Sync failed"}
+              </button>
+            </div>
           </div>
         </div>
-      )}
-
-
-
-
-
-
-
-
-
-
-
-
-      {/* Health Cards */}
-
-      <GroupedHealthCards averageMetrics={averageMetrics} period={period} />
-
-
-
-
-
-
-      {/* Charts */}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
-        <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
-
-
-        <LineChartPanel
-          title="Blood Pressure Trend"
-          data={history.blood_pressure.map((d) => ({
-            systolic: d.systolic,
-            diastolic: d.diastolic,
-            timestamp: d.timestamp,  // ⬅️ keep raw ISO timestamp
-          }))}
-          color="red"
-        />
-
-
-
-
-        {/* <LineChartPanel title="Sleep Trend" data={history.sleep} unit="hrs" /> */}
-        <LineChartPanel title="Stress Trend" data={history.stress} unit="level" />
       </div>
 
-      <SleepChart sleepSessions={sleepSessions} />
-      {/* <ActivityChart data={activityLogs} /> */}
+      {/* Page content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 pb-10 space-y-5">
+        {/* Quick Summary */}
+        <div className="bg-white rounded-3xl border shadow-sm p-4 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-gray-500">{period}</div>
+              <div className="text-base sm:text-lg font-bold text-gray-900">
+                Quick Summary
+              </div>
+            </div>
+            <div className="text-xs text-gray-500">
+              Updated{" "}
+              {new Date().toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
 
+          <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="rounded-2xl border bg-white p-4">
+              <div className="text-xs text-gray-500">Heart Rate</div>
+              <div className="mt-1 flex items-end gap-2">
+                <div className="text-xl font-extrabold text-gray-900">
+                  {averageMetrics.heart_rate?.primary ?? "--"}
+                </div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {averageMetrics.heart_rate?.unit ?? "bpm"}
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-gray-500 line-clamp-1">
+                {averageMetrics.heart_rate?.subtitle ?? ""}
+              </div>
+            </div>
 
-      <div className="min-h-[40px] text-center">
-        <p className="text-sm text-gray-500 mt-2">Last updated at: {new Date().toLocaleTimeString()}</p>
+            <div className="rounded-2xl border bg-white p-4">
+              <div className="text-xs text-gray-500">SpO₂</div>
+              <div className="mt-1 flex items-end gap-2">
+                <div className="text-xl font-extrabold text-gray-900">
+                  {averageMetrics.spo2?.primary ?? "--"}
+                </div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {averageMetrics.spo2?.unit ?? "%"}
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-gray-500 line-clamp-1">
+                {averageMetrics.spo2?.subtitle ?? ""}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-white p-4">
+              <div className="text-xs text-gray-500">Blood Pressure</div>
+              <div className="mt-1 flex items-end gap-2">
+                <div className="text-xl font-extrabold text-gray-900">
+                  {averageMetrics.blood_pressure?.primary ?? "--"}
+                </div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {averageMetrics.blood_pressure?.unit ?? "mmHg"}
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-gray-500 line-clamp-1">
+                {averageMetrics.blood_pressure?.subtitle ?? ""}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-white p-4">
+              <div className="text-xs text-gray-500">Steps</div>
+              <div className="mt-1 flex items-end gap-2">
+                <div className="text-xl font-extrabold text-gray-900">
+                  {averageMetrics.steps?.primary ?? "--"}
+                </div>
+              </div>
+              <div className="mt-1 text-xs text-gray-500 line-clamp-1">
+                {averageMetrics.steps?.subtitle ?? ""}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Time range */}
+        <div className="bg-white rounded-3xl border shadow-sm p-4 sm:p-6">
+          <div className="text-base font-bold text-gray-900">Time range</div>
+
+          <div className="mt-4">
+            <PeriodSelector period={period} setPeriod={setPeriod} />
+          </div>
+
+          {period === "Custom" && (
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-gray-900">
+                Select Date
+              </label>
+              <input
+                type="date"
+                value={customStart || ""}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="mt-2 w-full sm:w-auto border rounded-xl px-3 py-2 bg-white"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Overview */}
+        <div className="bg-white rounded-3xl border shadow-sm p-4 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-base font-bold text-gray-900">Overview</div>
+              <div className="text-xs text-gray-500">
+                Tap a group to expand and see more
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <GroupedHealthCards averageMetrics={averageMetrics} period={period} />
+          </div>
+        </div>
+
+        {/* Trends */}
+        <div className="bg-white rounded-3xl border shadow-sm p-4 sm:p-6">
+          <div className="text-base font-bold text-gray-900">Trends</div>
+
+          {/* Mobile tabs */}
+          <div className="mt-4 sm:hidden">
+            <div className="bg-gray-50 border rounded-2xl p-2">
+              <div className="grid grid-cols-2 gap-2">
+                {["Heart Rate", "SpO₂", "Blood Pressure", "Stress"].map((t) => {
+                  const active = trendTab === t;
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setTrendTab(t)}
+                      className={[
+                        "h-11 rounded-2xl text-sm font-semibold transition",
+                        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
+                        active
+                          ? "bg-white text-gray-900 shadow-sm border border-gray-200"
+                          : "bg-transparent text-gray-600 hover:text-gray-900 hover:bg-white/60",
+                      ].join(" ")}
+                      aria-pressed={active}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              {trendTab === "Heart Rate" && (
+                <LineChartPanel
+                  title="Heart Rate Trend"
+                  data={history.heart_rate}
+                  unit="bpm"
+                />
+              )}
+
+              {trendTab === "SpO₂" && (
+                <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
+              )}
+
+              {trendTab === "Blood Pressure" && (
+                <LineChartPanel
+                  title="Blood Pressure Trend"
+                  data={history.blood_pressure.map((d) => ({
+                    systolic: d.systolic,
+                    diastolic: d.diastolic,
+                    timestamp: d.timestamp,
+                  }))}
+                  color="red"
+                />
+              )}
+
+              {trendTab === "Stress" && (
+                <LineChartPanel
+                  title="Stress Trend"
+                  data={history.stress}
+                  unit="level"
+                />
+              )}
+            </div>
+          </div>
+
+          {/* Desktop grid */}
+          <div className="hidden sm:grid mt-4 grid-cols-1 md:grid-cols-2 gap-5">
+            <LineChartPanel title="Heart Rate Trend" data={history.heart_rate} unit="bpm" />
+            <LineChartPanel title="SpO₂ Trend" data={history.spo2} unit="%" />
+
+            <LineChartPanel
+              title="Blood Pressure Trend"
+              data={history.blood_pressure.map((d) => ({
+                systolic: d.systolic,
+                diastolic: d.diastolic,
+                timestamp: d.timestamp,
+              }))}
+              color="red"
+            />
+
+            <LineChartPanel title="Stress Trend" data={history.stress} unit="level" />
+          </div>
+        </div>
+
+        {/* Sleep */}
+        <div className="bg-white rounded-3xl border shadow-sm p-4 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-base font-bold text-gray-900">Sleep</div>
+              <div className="text-xs text-gray-500">
+                Sessions across recent days
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <SleepChart sleepSessions={sleepSessions} />
+          </div>
+        </div>
+
+        <div className="text-center text-xs text-gray-500 pb-4">
+          Insights are based on your personal baseline and are not a medical diagnosis.
+        </div>
       </div>
     </div>
   );
 };
 
 export default Dashboard;
-
-

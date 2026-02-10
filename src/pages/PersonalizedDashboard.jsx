@@ -1,4 +1,3 @@
-
 // /src/pages/PersonalizedDashboard.jsx
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -7,13 +6,40 @@ import PersonalizedAnomalyCard from "../components/PersonalizedAnomalyCard";
 import PersonalizedHealthChart from "../components/PersonalizedHealthChart";
 import axios from "../api/axios";
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Label } from "recharts";
+
+
+const DonutCenterLabel = ({ viewBox, value, status }) => {
+  const cx = viewBox?.cx;
+  const cy = viewBox?.cy;
+  if (cx == null || cy == null) return null;
+
+  const isAlert = status === "alert";
+
+  return (
+    <>
+      <text
+        x={cx}
+        y={cy - 4}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className={`text-2xl font-extrabold ${isAlert ? "fill-red-700" : "fill-green-700"}`}
+      >
+        {Number(value).toFixed(1)}%
+      </text>
+
+      <text
+        x={cx}
+        y={cy + 16}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        className={`text-xs font-semibold ${isAlert ? "fill-red-600" : "fill-green-600"}`}
+      >
+        {isAlert ? "Anomalies" : "Normal"}
+      </text>
+    </>
+  );
+};
 
 const PersonalizedDashboard = () => {
   const [anomalyData, setAnomalyData] = useState(null);
@@ -24,7 +50,6 @@ const PersonalizedDashboard = () => {
   useEffect(() => {
     const email = localStorage.getItem("user_email");
 
-    // 🔒 Redirect to login if not logged in
     if (!email) {
       navigate("/login");
       return;
@@ -56,29 +81,30 @@ const PersonalizedDashboard = () => {
     fetchData();
   }, [navigate]);
 
-  // ---------- UI helpers ----------
+  
   const statusMeta = useMemo(() => {
     const status = anomalyData?.status;
     if (status === "alert") {
       return {
         label: "Alert",
-        badge: "bg-red-100 text-red-700 border-red-200",
-        card: "border-red-200",
+        badge: "bg-red-50 text-red-700 border-red-200",
+        border: "border-red-200",
         icon: "⚠️",
         headline: "Needs attention",
       };
     }
     return {
       label: "Normal",
-      badge: "bg-green-100 text-green-700 border-green-200",
-      card: "border-green-200",
+      badge: "bg-green-50 text-green-700 border-green-200",
+      border: "border-green-200",
       icon: "✅",
       headline: "Looks normal",
     };
   }, [anomalyData]);
 
-  const percent = anomalyData?.percent_anomalies ?? 0;
+  const percent = Number(anomalyData?.percent_anomalies ?? 0);
   const anomalyColor = anomalyData?.status === "alert" ? "#ef4444" : "#22c55e";
+
   const donutData = useMemo(() => {
     const p = Math.max(0, Math.min(100, Number(percent) || 0));
     return [
@@ -105,149 +131,268 @@ const PersonalizedDashboard = () => {
   const contributors = anomalyData?.top_contributors ?? [];
   const confidence = anomalyData?.data_confidence ?? null;
 
+  const todayLabel = useMemo(() => {
+    return new Date().toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "2-digit",
+      month: "short",
+    });
+  }, []);
+
+  // ---- Early returns (clean + prevents overlap) ----
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs text-gray-500">{todayLabel}</div>
+                <div className="text-lg sm:text-xl font-extrabold text-gray-900 truncate">
+                  Insights
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full border bg-gray-50 text-gray-700 text-xs font-semibold">
+                Analyzing
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 pb-10">
+          <div className="bg-white rounded-3xl border shadow-sm p-5 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-gray-500">Personalized baseline</div>
+                <div className="text-base font-bold text-gray-900">Analyzing your health data…</div>
+              </div>
+              <div className="h-8 w-8 rounded-full border-2 border-gray-300 border-t-transparent animate-spin" />
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="h-20 rounded-2xl bg-gray-100 animate-pulse" />
+              <div className="h-20 rounded-2xl bg-gray-100 animate-pulse" />
+            </div>
+
+            <div className="mt-4 h-40 rounded-2xl bg-gray-100 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loading && message) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs text-gray-500">{todayLabel}</div>
+                <div className="text-lg sm:text-xl font-extrabold text-gray-900 truncate">
+                  Insights
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full border bg-gray-50 text-gray-700 text-xs font-semibold">
+                Ready
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 pb-10">
+          <div className="bg-white rounded-3xl border shadow-sm p-5 sm:p-6">
+            <div className="text-base font-bold text-gray-900">Personalized insights</div>
+            <p className="mt-2 text-sm text-gray-700">{message}</p>
+
+            <div className="mt-4 text-xs text-gray-500">
+              Tip: Sync a few days of resting data and check again.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Main UI ----
   return (
-    <div className="p-3 sm:p-4 space-y-4">
+    <div className="min-h-screen bg-gray-50">
+      
+      <div className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs text-gray-500">{todayLabel}</div>
+              <div className="text-lg sm:text-xl font-extrabold text-gray-900 truncate">
+                Insights
+              </div>
+            </div>
 
-      <div className="flex items-end justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Personalized Health Dashboard</h1>
-
-        {!loading && anomalyData && (
-          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border whitespace-nowrap ${statusMeta.badge}`}>
-
-            <span>{statusMeta.icon}</span>
-            <span className="font-semibold">{statusMeta.label}</span>
-            {confidence && (
-              <span className="text-xs opacity-80">
-                • data confidence: {confidence}
+            {anomalyData ? (
+              <div
+                className={[
+                  "inline-flex items-center gap-2 px-3 py-1 rounded-full border whitespace-nowrap",
+                  statusMeta.badge,
+                ].join(" ")}
+              >
+                <span>{statusMeta.icon}</span>
+                <span className="font-semibold">{statusMeta.label}</span>
+                {confidence ? (
+                  <span className="text-xs opacity-80">• confidence: {confidence}</span>
+                ) : null}
+              </div>
+            ) : (
+              <span className="px-3 py-1 rounded-full border bg-gray-50 text-gray-700 text-xs font-semibold">
+                Ready
               </span>
             )}
           </div>
-        )}
+        </div>
       </div>
 
-      {loading && <p>Analyzing your health data...</p>}
+      {/* Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 pb-10 space-y-5">
+        <div className="text-sm text-gray-500">
+          Personalized baseline insights for today
+        </div>
 
-      {!loading && message && <p className="text-gray-600">{message}</p>}
-
-      {!loading && anomalyData && (
-        <>
-          {/* Row 1: Summary + Donut */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* Left: Keep your existing text summary EXACTLY as-is in this card */}
-            <div className={`bg-white rounded-lg shadow-sm p-4 border ${statusMeta.card} lg:col-span-2`}>
-
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm text-gray-500">Today’s status</div>
-                  <div className="text-xl font-bold flex items-center gap-2">
-                    <span>{statusMeta.icon}</span>
-                    <span>{statusMeta.headline}</span>
+        {anomalyData ? (
+          <>
+            {/* Row 1: Summary + donut */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Summary card */}
+              <div className={["bg-white rounded-3xl border shadow-sm p-5 sm:p-6", statusMeta.border, "lg:col-span-2"].join(" ")}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="mt-1 text-xl sm:text-2xl font-extrabold text-gray-900 flex items-center gap-2">
+                      <span>{statusMeta.icon}</span>
+                      <span>{statusMeta.headline}</span>
+                    </div>
+                    <div className="mt-2 text-sm text-gray-600">
+                      Based on your resting baseline windows.
+                    </div>
                   </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full border text-sm font-semibold ${statusMeta.badge}`}>
-                  {statusMeta.label}
+
+                <div className="mt-5">
+                  <PersonalizedAnomalyCard data={anomalyData} />
                 </div>
-              </div>
 
-              <div className="mt-4">
-                {/* TEXT BLOCK MUST REMAIN AS IT IS → we keep it inside PersonalizedAnomalyCard */}
-                <PersonalizedAnomalyCard data={anomalyData} />
-              </div>
-
-              {/* Contributors */}
-              {contributors.length > 0 && (
-                <div className="mt-4">
-                  <div className="text-sm font-semibold text-gray-700 mb-2">
-                    Main contributors today
+                {contributors.length > 0 ? (
+                  <div className="mt-5">
+                    <div className="text-sm font-semibold text-gray-700 mb-2">
+                      Main contributors today
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {contributors.map((c) => (
+                        <span
+                          key={c}
+                          className="px-3 py-1 rounded-full bg-gray-50 text-gray-700 text-sm border"
+                        >
+                          {c}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {contributors.map((c) => (
-                      <span
-                        key={c}
-                        className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm border"
+                ) : null}
+              </div>
+
+              {/* Donut */}
+              <div className="bg-white rounded-3xl border shadow-sm p-5 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-gray-500">Anomaly rate</div>
+                    <div className="mt-1 text-2xl font-extrabold text-gray-900">
+                      {Number(percent).toFixed(2)}%
+                    </div>
+                  </div>
+
+                  <span
+                    className={[
+                      "px-3 py-1 rounded-full border text-xs font-semibold",
+                      anomalyData.status === "alert"
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : "bg-green-50 text-green-700 border-green-200",
+                    ].join(" ")}
+                  >
+                    {anomalyData.status === "alert" ? "High" : "Normal"}
+                  </span>
+                </div>
+
+                <div className="mt-3 h-[180px] sm:h-[220px] w-full">
+                  <ResponsiveContainer>
+                    <PieChart>
+                      <Pie
+                        data={donutData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius="70%"
+                        outerRadius="92%"
+                        paddingAngle={2}
+                        isAnimationActive={true}
                       >
-                        {c}
-                      </span>
-                    ))}
-                  </div>
+                        <Cell fill={anomalyColor} />
+                        <Cell fill="#e5e7eb" />
+
+                        <Label
+                          position="center"
+                          content={(props) => (
+                            <DonutCenterLabel
+                              {...props}
+                              value={percent}
+                              status={anomalyData.status}
+                            />
+                          )}
+                        />
+                      </Pie>
+
+                      <Tooltip
+                        formatter={(value) =>
+                          typeof value === "number" ? `${value.toFixed(2)}%` : value
+                        }
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              )}
-            </div>
 
-            {/* Right: Donut chart */}
-            <div className="bg-white rounded-lg shadow-sm p-4 border">
-              <div className="text-sm text-gray-500">Anomaly rate</div>
-              <div className="text-lg font-bold">
-                {Number(percent).toFixed(2)}%
-              </div>
+                <div className="mt-2 text-sm text-gray-600">
+                  {anomalyData.status === "alert"
+                    ? "Higher-than-usual deviation from baseline today."
+                    : "Within your normal baseline range."}
+                </div>
 
-
-              <div className="mt-2 h-[180px] sm:h-[220px] w-full">
-
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Pie
-                      data={donutData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius="65%"
-                      outerRadius="90%"
-                      paddingAngle={2}
-                      isAnimationActive={true}
-                    >
-                      {/* Anomalies slice */}
-                      <Cell fill={anomalyColor} />
-
-                      {/* Normal slice */}
-                      <Cell fill="#e5e7eb" />
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) =>
-                        typeof value === "number" ? `${value.toFixed(2)}%` : value
-                      }
-                    />
-
-                  </PieChart>
-
-                </ResponsiveContainer>
-              </div>
-
-              <div className="text-sm text-gray-600 mt-2">
-                {anomalyData.status === "alert"
-                  ? "High anomaly rate detected. Review trends below."
-                  : "Anomaly rate is within normal range."}
+                <div className="mt-3 text-xs text-gray-500">
+                  Tip: Look at the timeline to see when deviations happened.
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Row 2: Timeline/Charts */}
-          <div className="bg-white rounded-lg shadow-sm p-4 border">
-            <div className="flex items-center justify-between flex-wrap gap-2">
+            {/* Row 2 */}
+            <div className="bg-white rounded-3xl border shadow-sm p-5 sm:p-6">
               <div>
-                <div className="text-lg font-bold">Today’s timeline</div>
+                <div className="text-lg font-bold text-gray-900">Today’s timeline</div>
                 <div className="text-sm text-gray-500">
                   Anomalies highlighted across your resting windows
                 </div>
               </div>
+
+              <div className="mt-4">
+                <PersonalizedHealthChart series={anomalyData.series || []} />
+              </div>
             </div>
 
-            {/* Pass series to chart so it can render anomaly markers / trends */}
-            <div className="mt-4">
-              <PersonalizedHealthChart series={anomalyData.series || []} />
-            </div>
-          </div>
+            {/* Row 3 */}
+            <div className="bg-white rounded-3xl border shadow-sm p-5 sm:p-6">
+              <div className="text-lg font-bold text-gray-900">What does this mean?</div>
+              <p className="text-gray-700 mt-2 leading-relaxed">{whatItMeansText}</p>
 
-          {/* Row 3: What it means */}
-          <div className="bg-white rounded-lg shadow-sm p-4 border">
-            <div className="text-lg font-bold">What does this mean?</div>
-            <p className="text-gray-700 mt-2 leading-relaxed">{whatItMeansText}</p>
-
-            <div className="mt-3 text-xs text-gray-500">
-              Note: This is an automated insight based on your personal baseline. It is not a medical diagnosis.
+              <div className="mt-4 text-xs text-gray-500">
+                Note: This is an automated insight based on your personal baseline. It is not a medical diagnosis.
+              </div>
             </div>
-          </div>
-        </>
-      )}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 };

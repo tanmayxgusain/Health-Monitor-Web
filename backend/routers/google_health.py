@@ -1,15 +1,11 @@
-from fastapi import APIRouter, Request, Depends, HTTPException,Query
+from fastapi import APIRouter, Depends, HTTPException,Query
 from datetime import datetime, timedelta,timezone
 import httpx
 from models import User, HealthData, SleepSession
-import requests
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from database import get_db
-from typing import List, Optional
-import json
-from .google_auth import GOOGLE_FIT_API_URL, DATA_TYPES, build_request_body  # Adjust if needed
-from sqlalchemy import and_,func
+from typing import List
 from schemas import UserUpdate
 from services.google_sync import sync_google_fit_data
 
@@ -45,21 +41,13 @@ async def get_today_health_data(
     db: AsyncSession = Depends(get_db)
 ):
 
-
-    # Find the user
     result = await db.execute(select(User).where(User.email == user_email))
     user = result.scalars().first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Define today's date range (UTC)
-    # now = datetime.utcnow()
-    # start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    # sleep_start = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=8)
 
-
-     # ⏰ Step 1: Compute time range based on IST
     india_tz = pytz.timezone("Asia/Kolkata")
     today_ist = datetime.now(india_tz).date()
 
@@ -77,10 +65,7 @@ async def get_today_health_data(
     result = await db.execute(
         select(HealthData).where(
             HealthData.user_id == user.id,
-            # HealthData.timestamp >= start_of_day,     #OLD VERSION
-            # HealthData.timestamp >= sleep_start,      #NEW VERSION
             HealthData.timestamp >= start_utc,
-            # HealthData.timestamp <= now
             HealthData.timestamp <= end_utc
         )
     )
@@ -88,7 +73,7 @@ async def get_today_health_data(
 
     records: List[HealthData] = result.scalars().all()
 
-    # Format by metric type
+    
     heart_rate = []
     spo2 = []
     blood_pressure = []
@@ -99,8 +84,7 @@ async def get_today_health_data(
     distance = []
 
     for rec in records:
-        # ts = int(rec.timestamp.timestamp() * 1000)   #old code
-        ts = int(rec.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)  #new code
+        ts = int(rec.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000) 
 
         if rec.metric_type == "heart_rate" and rec.value is not None:
             heart_rate.append({"timestamp": ts, "value": rec.value})
@@ -166,7 +150,7 @@ async def get_weekly_sleep(user_email: str, db: AsyncSession = Depends(get_db)):
     sleep_summary = []
 
     for session in sleep_sessions:
-        date_label = session.start_time.strftime("%a")  # Mon, Tue, etc.
+        date_label = session.start_time.strftime("%a")  
         sleep_summary.append({
             "day": date_label,
             "start_time": session.start_time.isoformat(),
@@ -191,8 +175,6 @@ async def get_sleep_sessions(user_email: str, days: int = 7, db: AsyncSession = 
     result = await db.execute(
         select(SleepSession).where(
             SleepSession.user_id == user.id,
-            # SleepSession.start_time >= start_dt,
-            # SleepSession.end_time <= end_dt
             SleepSession.start_time <= end_dt,
             SleepSession.end_time >= start_dt
         ).order_by(SleepSession.start_time)
@@ -206,7 +188,6 @@ async def get_sleep_sessions(user_email: str, days: int = 7, db: AsyncSession = 
                 "start_time": s.start_time.isoformat(),
                 "end_time": s.end_time.isoformat(),
                 "duration_hours": s.duration_hours,
-                # "duration_minutes": s.duration_minutes or round(s.duration_hours * 60, 2)
                 "duration_minutes": round(s.duration_hours * 60, 2)
             } for s in sessions
         ]
@@ -220,10 +201,6 @@ async def get_health_data_history(
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        # # start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc) #OLD VERSION
-        # start_dt = datetime.strptime(start_date, "%Y-%m-%d")                                #NEW VERSION
-        # # end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=timezone.utc) #OLD VERSION
-        # end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)                #NEW VERSION
 
         india_tz = pytz.timezone("Asia/Kolkata")
 
@@ -259,14 +236,14 @@ async def get_health_data_history(
     result = await db.execute(
         select(HealthData).where(
             HealthData.user_id == user.id,
-            HealthData.timestamp >= start_dt, # .replace(tzinfo=None),
-            HealthData.timestamp < end_dt, # .replace(tzinfo=None),
+            HealthData.timestamp >= start_dt, 
+            HealthData.timestamp < end_dt, 
         )
     )
     records: List[HealthData] = result.scalars().all()
 
     for rec in records:
-        # ts = int(rec.timestamp.timestamp() * 1000)
+        
         ts = int(rec.timestamp.replace(tzinfo=timezone.utc).timestamp() * 1000)
 
         if rec.metric_type == "heart_rate" and rec.value is not None:
@@ -298,14 +275,7 @@ async def get_health_data_history(
 
     for metric in METRICS_SUM | METRICS_AVG:
         is_sum = metric in METRICS_SUM
-        # query = select(
-        #     func.sum(HealthData.value) if metric in METRICS_SUM else func.avg(HealthData.value)
-        # ).where(
-        #     HealthData.user_id == user.id,
-        #     HealthData.metric_type == metric,
-        #     HealthData.timestamp >= start_dt.replace(tzinfo=None),
-        #     HealthData.timestamp <= end_dt.replace(tzinfo=None)
-        # )
+        
         values = locals()[metric]
         if values:
             agg_val = sum([v['value'] for v in values]) if is_sum else sum([v['value'] for v in values]) / len(values)
@@ -317,7 +287,7 @@ async def get_health_data_history(
     print("distance:", len(distance), distance)
     print("calories:", len(calories), calories)
 
-    # Handle blood pressure separately
+    
     bp_values = blood_pressure
     if bp_values:
         systolic_vals = [v["systolic"] for v in bp_values]
@@ -346,14 +316,14 @@ async def get_health_data_history(
 @router.put("/users/update")
 async def update_user_profile(update_data: UserUpdate, db: AsyncSession = Depends(get_db)):
     try:
-        # Get the existing user by email
+        
         result = await db.execute(select(User).where(User.email == update_data.email))
         user = result.scalar_one_or_none()
 
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Update only the fields provided
+        
         if update_data.age is not None:
             user.age = update_data.age
         if update_data.gender is not None:
@@ -391,8 +361,7 @@ async def get_google_devices(user_email: str, db: AsyncSession = Depends(get_db)
 
         data_sources = res.json().get("dataSource", [])
 
-        # Extract device info from each data source (if available)
-        # Use set to remove duplicates based on model + uid
+        
         seen = set()
         devices = []
 
