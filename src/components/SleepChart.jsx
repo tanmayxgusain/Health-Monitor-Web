@@ -2,13 +2,12 @@ import React from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from "recharts";
 import { format, parseISO, subDays } from "date-fns";
 
-const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const CustomTooltip = ({ active, payload, label }) => {
+
+const CustomTooltip = ({ active, payload }) => {
   if (active && payload?.length) {
     const session = payload[0].payload;
 
-    const formattedDate = session.date ? format(parseISO(session.date), "d MMM") : "";
 
 
     return (

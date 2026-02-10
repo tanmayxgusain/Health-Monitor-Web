@@ -15,6 +15,73 @@ const formatDuration = (hours) => {
   return `${parseFloat(hours).toFixed(1)} hrs`;
 };
 
+const getSumInt = (data) => {
+  if (!data || data.length === 0) return "--";
+  const sum = data.reduce((acc, val) => acc + (val.value || 0), 0);
+  return Math.round(sum);
+};
+
+const getSumFloat = (data) => {
+  if (!data || data.length === 0) return 0;
+  return data.reduce(
+    (acc, val) => acc + (val.value || val.duration_hours || 0),
+    0
+  );
+};
+
+const toNums = (arr) =>
+  (arr || [])
+    .map((x) => Number(x?.value))
+    .filter((v) => Number.isFinite(v));
+
+const getMin = (data) => {
+  const nums = toNums(data);
+  if (!nums.length) return "--";
+  return Math.min(...nums);
+};
+
+const getMax = (data) => {
+  const nums = toNums(data);
+  if (!nums.length) return "--";
+  return Math.max(...nums);
+};
+
+const getMedian = (data) => {
+  const nums = toNums(data).sort((a, b) => a - b);
+  if (!nums.length) return "--";
+  const mid = Math.floor(nums.length / 2);
+  if (nums.length % 2 === 0) return Math.round((nums[mid - 1] + nums[mid]) / 2);
+  return Math.round(nums[mid]);
+};
+
+const getAvgRounded = (data) => {
+  const nums = toNums(data);
+  if (!nums.length) return "--";
+  const sum = nums.reduce((a, b) => a + b, 0);
+  return Math.round(sum / nums.length);
+};
+
+const getLatestBP = (bpArr) => {
+  const arr = (bpArr || [])
+    .filter((d) => d?.systolic != null && d?.diastolic != null && d?.timestamp)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  if (!arr.length) return "--";
+  const last = arr[arr.length - 1];
+  return `${Math.round(Number(last.systolic))}/${Math.round(
+    Number(last.diastolic)
+  )}`;
+};
+
+const getAvgBP = (bpArr) => {
+  const arr = (bpArr || []).filter(
+    (d) => d?.systolic != null && d?.diastolic != null
+  );
+  if (!arr.length) return "--";
+  const s = arr.reduce((a, d) => a + Number(d.systolic), 0) / arr.length;
+  const di = arr.reduce((a, d) => a + Number(d.diastolic), 0) / arr.length;
+  return `${Math.round(s)}/${Math.round(di)}`;
+};
+
 const Dashboard = () => {
   const [period, setPeriod] = useState("Today");
   const [customStart, setCustomStart] = useState(null);
@@ -24,9 +91,9 @@ const Dashboard = () => {
 
   const [sleepSessions, setSleepSessions] = useState([]);
   const [userName, setUserName] = useState("");
-  const [activityLogs, setActivityLogs] = useState([]);
 
-  const [syncState, setSyncState] = useState("idle"); 
+
+  const [syncState, setSyncState] = useState("idle");
   const [lastSyncedAt, setLastSyncedAt] = useState(
     localStorage.getItem("last_synced_at")
   );
@@ -53,73 +120,8 @@ const Dashboard = () => {
     stress: "--",
   });
 
-  
-  const getSumInt = (data) => {
-    if (!data || data.length === 0) return "--";
-    const sum = data.reduce((acc, val) => acc + (val.value || 0), 0);
-    return Math.round(sum);
-  };
 
-  const getSumFloat = (data) => {
-    if (!data || data.length === 0) return 0;
-    return data.reduce(
-      (acc, val) => acc + (val.value || val.duration_hours || 0),
-      0
-    );
-  };
 
-  const toNums = (arr) =>
-    (arr || [])
-      .map((x) => Number(x?.value))
-      .filter((v) => Number.isFinite(v));
-
-  const getMin = (data) => {
-    const nums = toNums(data);
-    if (!nums.length) return "--";
-    return Math.min(...nums);
-  };
-
-  const getMax = (data) => {
-    const nums = toNums(data);
-    if (!nums.length) return "--";
-    return Math.max(...nums);
-  };
-
-  const getMedian = (data) => {
-    const nums = toNums(data).sort((a, b) => a - b);
-    if (!nums.length) return "--";
-    const mid = Math.floor(nums.length / 2);
-    if (nums.length % 2 === 0) return Math.round((nums[mid - 1] + nums[mid]) / 2);
-    return Math.round(nums[mid]);
-  };
-
-  const getAvgRounded = (data) => {
-    const nums = toNums(data);
-    if (!nums.length) return "--";
-    const sum = nums.reduce((a, b) => a + b, 0);
-    return Math.round(sum / nums.length);
-  };
-
-  const getLatestBP = (bpArr) => {
-    const arr = (bpArr || [])
-      .filter((d) => d?.systolic != null && d?.diastolic != null && d?.timestamp)
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    if (!arr.length) return "--";
-    const last = arr[arr.length - 1];
-    return `${Math.round(Number(last.systolic))}/${Math.round(
-      Number(last.diastolic)
-    )}`;
-  };
-
-  const getAvgBP = (bpArr) => {
-    const arr = (bpArr || []).filter(
-      (d) => d?.systolic != null && d?.diastolic != null
-    );
-    if (!arr.length) return "--";
-    const s = arr.reduce((a, d) => a + Number(d.systolic), 0) / arr.length;
-    const di = arr.reduce((a, d) => a + Number(d.diastolic), 0) / arr.length;
-    return `${Math.round(s)}/${Math.round(di)}`;
-  };
 
   // ---------- sync ----------
   const handleSync = async () => {
@@ -136,7 +138,7 @@ const Dashboard = () => {
 
       setSyncState("success");
 
-     
+
       const nowIso = new Date().toISOString();
       localStorage.setItem("last_synced_at", nowIso);
       setLastSyncedAt(nowIso);
@@ -152,9 +154,9 @@ const Dashboard = () => {
   // ---------- auth redirect ----------
   useEffect(() => {
     if (!email) navigate("/login");
-  }, []);
+  }, [email, navigate]);
 
- 
+
   useEffect(() => {
     if (period !== "Custom") setCustomStart(null);
   }, [period]);
@@ -238,36 +240,36 @@ const Dashboard = () => {
         setAverageMetrics({
           heart_rate: data.heart_rate?.length
             ? {
-                primary: getMedian(data.heart_rate),
-                unit: "bpm",
-                subtitle: `Low ${getMin(data.heart_rate)} • High ${getMax(
-                  data.heart_rate
-                )}`,
-              }
+              primary: getMedian(data.heart_rate),
+              unit: "bpm",
+              subtitle: `Low ${getMin(data.heart_rate)} • High ${getMax(
+                data.heart_rate
+              )}`,
+            }
             : { primary: "--", unit: "bpm", subtitle: "" },
 
           spo2: data.spo2?.length
             ? {
-                primary: getMin(data.spo2),
-                unit: "%",
-                subtitle: `Avg ${getAvgRounded(data.spo2)}%`,
-              }
+              primary: getMin(data.spo2),
+              unit: "%",
+              subtitle: `Avg ${getAvgRounded(data.spo2)}%`,
+            }
             : { primary: "--", unit: "%", subtitle: "" },
 
           blood_pressure: data.blood_pressure?.length
             ? {
-                primary: getLatestBP(data.blood_pressure),
-                unit: "mmHg",
-                subtitle: `Today avg ${getAvgBP(data.blood_pressure)}`,
-              }
+              primary: getLatestBP(data.blood_pressure),
+              unit: "mmHg",
+              subtitle: `Today avg ${getAvgBP(data.blood_pressure)}`,
+            }
             : { primary: "--", unit: "mmHg", subtitle: "" },
 
           stress: data.stress?.length
             ? {
-                primary: getMedian(data.stress),
-                unit: "level",
-                subtitle: `Peak ${getMax(data.stress)}`,
-              }
+              primary: getMedian(data.stress),
+              unit: "level",
+              subtitle: `Peak ${getMax(data.stress)}`,
+            }
             : { primary: "--", unit: "level", subtitle: "" },
 
           steps: data.steps?.length
@@ -276,18 +278,18 @@ const Dashboard = () => {
 
           calories: data.calories?.length
             ? {
-                primary: getSumInt(data.calories),
-                unit: "kcal",
-                subtitle: "Today total",
-              }
+              primary: getSumInt(data.calories),
+              unit: "kcal",
+              subtitle: "Today total",
+            }
             : { primary: "--", unit: "kcal", subtitle: "" },
 
           distance: data.distance?.length
             ? {
-                primary: `${getSumFloat(data.distance).toFixed(2)}`,
-                unit: "km",
-                subtitle: "Today total",
-              }
+              primary: `${getSumFloat(data.distance).toFixed(2)}`,
+              unit: "km",
+              subtitle: "Today total",
+            }
             : { primary: "--", unit: "km", subtitle: "" },
 
           sleep: (() => {
@@ -304,10 +306,10 @@ const Dashboard = () => {
 
             return filteredSleepSessions.length
               ? {
-                  primary: formatDuration(getSumFloat(filteredSleepSessions)),
-                  unit: "",
-                  subtitle: "Last night",
-                }
+                primary: formatDuration(getSumFloat(filteredSleepSessions)),
+                unit: "",
+                subtitle: "Last night",
+              }
               : { primary: "--", unit: "", subtitle: "" };
           })(),
         });
@@ -315,19 +317,19 @@ const Dashboard = () => {
         console.error("History DB fetch error:", err);
       }
 
-      try {
-        // const actRes = await axios.get("http://localhost:8000/activity-logs", {
-        const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
-          params: { user_email: email, days: 7 },
-        });
-        setActivityLogs(actRes.data || []);
-      } catch (err) {
-        console.error("Failed to fetch activity logs:", err);
-      }
+      // try {
+      //   // const actRes = await axios.get("http://localhost:8000/activity-logs", {
+      //   const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
+      //     params: { user_email: email, days: 7 },
+      //   });
+      //   setActivityLogs(actRes.data || []);
+      // } catch (err) {
+      //   console.error("Failed to fetch activity logs:", err);
+      // }
     };
 
     fetchHealthData();
-  }, [period, customStart]);
+  }, [email,period, customStart]);
 
   // ---------- user name ----------
   useEffect(() => {
@@ -344,7 +346,7 @@ const Dashboard = () => {
       }
     };
     fetchUserName();
-  }, []);
+  }, [email]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -366,7 +368,7 @@ const Dashboard = () => {
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
-              
+
               <div className="flex flex-col items-end leading-tight">
                 <span
                   className={[
@@ -374,19 +376,19 @@ const Dashboard = () => {
                     syncState === "syncing"
                       ? "bg-blue-50 text-blue-700 border-blue-200"
                       : syncState === "success"
-                      ? "bg-green-50 text-green-700 border-green-200"
-                      : syncState === "error"
-                      ? "bg-red-50 text-red-700 border-red-200"
-                      : "bg-gray-50 text-gray-700 border-gray-200",
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : syncState === "error"
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-gray-50 text-gray-700 border-gray-200",
                   ].join(" ")}
                 >
                   {syncState === "syncing"
                     ? "Syncing"
                     : syncState === "success"
-                    ? "Synced"
-                    : syncState === "error"
-                    ? "Failed"
-                    : "Ready"}
+                      ? "Synced"
+                      : syncState === "error"
+                        ? "Failed"
+                        : "Ready"}
                 </span>
 
                 {lastSyncedAt && syncState !== "syncing" && (
@@ -400,7 +402,7 @@ const Dashboard = () => {
                 )}
               </div>
 
-              
+
               <button
                 onClick={handleSync}
                 disabled={syncState !== "idle"}
@@ -410,10 +412,10 @@ const Dashboard = () => {
                   syncState === "syncing"
                     ? "bg-blue-500 text-white cursor-not-allowed"
                     : syncState === "success"
-                    ? "bg-green-600 text-white"
-                    : syncState === "error"
-                    ? "bg-red-600 text-white"
-                    : "bg-blue-600 hover:bg-blue-700 text-white",
+                      ? "bg-green-600 text-white"
+                      : syncState === "error"
+                        ? "bg-red-600 text-white"
+                        : "bg-blue-600 hover:bg-blue-700 text-white",
                 ].join(" ")}
               >
                 {syncState === "syncing" && (
