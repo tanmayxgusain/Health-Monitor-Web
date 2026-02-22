@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginButton from "../components/LoginButton";
-import { enterDemoMode } from "../demo/demoMode";
+import { isDemoMode } from "../demo/demoMode";
+
 function Login() {
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState(false);
@@ -10,14 +11,15 @@ function Login() {
 
   useEffect(() => {
     const email = localStorage.getItem("user_email");
-    if (email) {
+    const demo = isDemoMode();
+
+    if (demo || email) {
       navigate("/dashboard", { replace: true });
     }
   }, [navigate]);
 
   return (
     <div className="min-h-screen bg-white sm:bg-gradient-to-br sm:from-blue-50 sm:via-white sm:to-blue-100 relative">
-
       {connecting ? (
         <div className="fixed inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center px-6">
           <div className="w-full max-w-sm rounded-3xl border bg-white shadow-sm p-6 text-center">
@@ -144,21 +146,6 @@ function Login() {
             {/* Login button */}
             <div className="mt-6 flex justify-center">
               <LoginButton onStart={() => setConnecting(true)} />
-
-            </div>
-
-            <div className="mt-3 flex justify-center">
-              <button
-                type="button"
-                disabled={connecting}
-                onClick={() => {
-                  enterDemoMode();
-                  navigate("/dashboard", { replace: true });
-                }}
-                className="w-full max-w-xs rounded-2xl border bg-white hover:bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900"
-              >
-                Try Demo (no login)
-              </button>
             </div>
 
             {/* Mobile expandable details */}

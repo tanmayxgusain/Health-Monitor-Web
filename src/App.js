@@ -27,19 +27,13 @@ const App = () => {
 
         {/* Protected Routes */}
 
-        {/* <Route
-          path="/"
-          element={
-            localStorage.getItem("user_email")
-              ? <Navigate to="/dashboard" replace />
-              : <Landing />
-          }
-        /> */}
+
 
         <Route
           path="/"
           element={
-            localStorage.getItem("user_email") || localStorage.getItem("demo_mode") === "true"
+            localStorage.getItem("user_email") &&
+              localStorage.getItem("demo_mode") !== "true"
               ? <Navigate to="/dashboard" replace />
               : <Landing />
           }
