@@ -27,42 +27,109 @@ const CustomTooltip = ({ active, payload }) => {
 
 
 
-const SleepChart = ({ sleepSessions }) => {
+// const SleepChart = ({ sleepSessions }) => {
   
+//   const groupedByDate = {};
+//   sleepSessions.forEach((s) => {
+//     const dateStr = s.date;
+//     groupedByDate[dateStr] = (groupedByDate[dateStr] || 0) + s.duration_hours;
+//   });
+
+  
+//   const today = new Date();
+//   const last7Days = [...Array(7)].map((_, i) => {
+//     const d = subDays(today, 6 - i); 
+//     const dateStr = format(d, "yyyy-MM-dd");
+//     const weekday = format(d, "EEE");       
+  
+
+//     return {
+//       date: dateStr,
+//       hours: Math.round((groupedByDate[dateStr] || 0) * 10) / 10,
+//       label: weekday,
+//     };
+//   });
+
+
+
+
+
+
+
+//   return (
+//     <div className="bg-white rounded shadow p-4">
+//       <h2 className="text-lg font-semibold mb-4"> Sleep (Last 7 Days)</h2>
+//       <ResponsiveContainer width="100%" height={300}>
+//         <BarChart data={last7Days}>
+//           <CartesianGrid strokeDasharray="3 3" />
+          
+//           <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+//           <YAxis unit="h" domain={[0, 12]} />
+//           <Tooltip content={<CustomTooltip />} />
+//           <Bar dataKey="hours" fill="#4f46e5" radius={[4, 4, 0, 0]}>
+//             <LabelList dataKey="hours" position="top" formatter={(val) => `${val}h`} />
+//           </Bar>
+//         </BarChart>
+//       </ResponsiveContainer>
+//     </div>
+//   );
+// };
+
+const SleepChart = ({ sleepSessions, isDemo = false }) => {
   const groupedByDate = {};
-  sleepSessions.forEach((s) => {
+  (sleepSessions || []).forEach((s) => {
     const dateStr = s.date;
-    groupedByDate[dateStr] = (groupedByDate[dateStr] || 0) + s.duration_hours;
+    if (!dateStr) return;
+    groupedByDate[dateStr] = (groupedByDate[dateStr] || 0) + (s.duration_hours || 0);
   });
 
-  
-  const today = new Date();
-  const last7Days = [...Array(7)].map((_, i) => {
-    const d = subDays(today, 6 - i); 
-    const dateStr = format(d, "yyyy-MM-dd");
-    const weekday = format(d, "EEE");       
-  
+  const buildFromToday = () => {
+    const today = new Date();
+    return [...Array(7)].map((_, i) => {
+      const d = subDays(today, 6 - i);
+      const dateStr = format(d, "yyyy-MM-dd");
+      const weekday = format(d, "EEE");
+      return {
+        date: dateStr,
+        hours: Math.round((groupedByDate[dateStr] || 0) * 10) / 10,
+        label: weekday,
+      };
+    });
+  };
 
-    return {
-      date: dateStr,
-      hours: Math.round((groupedByDate[dateStr] || 0) * 10) / 10,
-      label: weekday,
-    };
-  });
+  const buildFromDataset = () => {
+    // take last 7 dates available in the dataset (sorted)
+    const dates = Object.keys(groupedByDate).sort(); // yyyy-MM-dd sorts correctly
+    const last = dates.slice(-7);
 
+    // If dataset is smaller than 7, pad earlier days with 0 to keep chart stable
+    const padded =
+      last.length < 7
+        ? [...Array(7 - last.length)].map((_, i) => {
+            // create fake dates just for labels (won't be used in tooltip much)
+            const d = subDays(new Date(), (7 - last.length) - i);
+            return format(d, "yyyy-MM-dd");
+          }).concat(last)
+        : last;
 
+    return padded.map((dateStr) => {
+      const weekday = format(parseISO(dateStr), "EEE");
+      return {
+        date: dateStr,
+        hours: Math.round((groupedByDate[dateStr] || 0) * 10) / 10,
+        label: weekday,
+      };
+    });
+  };
 
-
-
-
+  const chartData = isDemo ? buildFromDataset() : buildFromToday();
 
   return (
     <div className="bg-white rounded shadow p-4">
-      <h2 className="text-lg font-semibold mb-4"> Sleep (Last 7 Days)</h2>
+      <h2 className="text-lg font-semibold mb-4">Sleep (Last 7 Days)</h2>
       <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={last7Days}>
+        <BarChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
-          
           <XAxis dataKey="label" tick={{ fontSize: 12 }} />
           <YAxis unit="h" domain={[0, 12]} />
           <Tooltip content={<CustomTooltip />} />
