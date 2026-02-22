@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Customized,
-  LabelList,
 } from "recharts";
 
 import { formatToIST } from "../utils/time";
@@ -227,11 +226,9 @@ const LineChartPanel = ({ data, title, color }) => {
   }
 
   // const showDots = !isBP && /heart\s*rate|hr\b|spo2|spo₂|oxygen|o2/i.test(title);
-  const isStress = /stress/i.test(title);
-
   const showDots =
-    isStress ||
-    (!isBP && /heart\s*rate|hr\b|spo2|spo₂|oxygen|o2/i.test(title));
+    !isBP &&
+    /heart\s*rate|hr\b|spo2|spo₂|oxygen|o2|stress/i.test(title);
 
   return (
     <div className="bg-white rounded-3xl border shadow-sm p-4 sm:p-5 w-full">
@@ -370,15 +367,8 @@ const LineChartPanel = ({ data, title, color }) => {
                 activeDot={{ r: 6 }}
                 connectNulls={false}
                 isAnimationActive={false}
-              >
-                {isStress ? (
-                  <LabelList
-                    dataKey="value"
-                    position="top"
-                    formatter={(v) => (v == null ? "" : v)}
-                  />
-                ) : null}
-              </Line>
+              />
+                
             )}
           </LineChart>
         </ResponsiveContainer>
