@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginButton from "../components/LoginButton";
-
+import { enterDemoMode } from "../demo/demoMode";
 function Login() {
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState(false);
@@ -144,6 +144,21 @@ function Login() {
             {/* Login button */}
             <div className="mt-6 flex justify-center">
               <LoginButton onStart={() => setConnecting(true)} />
+
+            </div>
+
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                disabled={connecting}
+                onClick={() => {
+                  enterDemoMode();
+                  navigate("/dashboard", { replace: true });
+                }}
+                className="w-full max-w-xs rounded-2xl border bg-white hover:bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-900"
+              >
+                Try Demo (no login)
+              </button>
             </div>
 
             {/* Mobile expandable details */}
