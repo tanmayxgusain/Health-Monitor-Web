@@ -12,6 +12,43 @@ import DemoTourModal from "../components/DemoTourModal";
 import { isDemoMode, exitDemoMode } from "../demo/demoMode";
 import { demoHistory, demoSleepSessions } from "../demo/demoData";
 
+const shiftDemoSleepSessionsToRecent = (sessions, days = 7) => {
+  if (!Array.isArray(sessions) || sessions.length === 0) return [];
+
+
+  const sorted = [...sessions].filter(s => s?.start_time && s?.end_time)
+    .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+  const take = sorted.slice(-days);
+  const now = new Date();
+
+
+  const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+
+  return take.map((s, idx) => {
+    const start = new Date(s.start_time);
+    const end = new Date(s.end_time);
+    const durationMs = Math.max(0, end - start);
+
+
+    const dayOffset = (days - 1 - idx) + 1;
+    const targetDay = new Date(today0.getTime() - dayOffset * 24 * 60 * 60 * 1000);
+
+
+    const targetStart = new Date(targetDay);
+    targetStart.setHours(start.getHours(), start.getMinutes(), 0, 0);
+
+    const targetEnd = new Date(targetStart.getTime() + durationMs);
+
+    return {
+      ...s,
+      start_time: targetStart.toISOString(),
+      end_time: targetEnd.toISOString(),
+    };
+  });
+};
+
 const formatDuration = (hours) => {
   if (!hours || hours === "--") return "--";
   return `${parseFloat(hours).toFixed(1)} hrs`;
@@ -182,7 +219,7 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchHealthData = async () => {
       if (demo) {
-        setSleepSessions(demoSleepSessions);
+        setSleepSessions(shiftDemoSleepSessionsToRecent(demoSleepSessions, 7));
 
         setHistory({
           heart_rate: demoHistory.heart_rate,
