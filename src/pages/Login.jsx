@@ -79,7 +79,7 @@ function Login() {
             <div className="leading-tight">
               <div className="font-bold text-gray-900">Smart Health Monitor</div>
               <div className="text-xs text-gray-500 hidden sm:block">
-                Private • Calm • Personalized
+                AI-powered health insights
               </div>
             </div>
           </div>
@@ -99,7 +99,7 @@ function Login() {
             <div className="mt-5 rounded-xl border bg-gray-50 p-4">
               <div className="font-semibold text-gray-900">You’ll see:</div>
               <ul className="mt-2 space-y-1 text-sm text-gray-700">
-                <li>• Daily anomaly summary + donut chart</li>
+                <li>• Daily health snapshot</li>
                 <li>• Timeline markers for unusual windows</li>
                 <li>• Trends for Heart Rate, SpO₂ and BP</li>
               </ul>
@@ -118,7 +118,8 @@ function Login() {
                 Connect to continue
               </h1>
               <p className="mt-2 text-sm text-gray-700">
-                Sync Google Fit data and get calm, personalized insights.
+                Connect your Google Fit account to see daily health summaries,
+                spot unusual patterns, and track trends over time.
               </p>
             </div>
 
@@ -131,15 +132,15 @@ function Login() {
             </div>
 
             {/* Trust chips */}
-            <div className="mt-4 lg:mt-6 flex flex-wrap gap-2">
+            <div className="mt-4 lg:mt-6 hidden lg:flex flex-wrap gap-2">
               <span className="px-3 py-1 rounded-full border bg-gray-50 text-xs font-semibold text-gray-700">
-                Privacy-first
+                Secure sign-in
               </span>
               <span className="px-3 py-1 rounded-full border bg-gray-50 text-xs font-semibold text-gray-700">
                 No ads
               </span>
               <span className="px-3 py-1 rounded-full border bg-gray-50 text-xs font-semibold text-gray-700">
-                Not a diagnosis
+                Privacy-first
               </span>
             </div>
 
@@ -163,12 +164,12 @@ function Login() {
               {showDetails ? (
                 <div className="mt-3 rounded-2xl border bg-gray-50 p-4">
                   <ul className="space-y-2 text-sm text-gray-700">
-                    <li>• Daily anomaly summary + donut chart</li>
+                    <li>• Daily health snapshot</li>
                     <li>• Timeline markers for unusual windows</li>
                     <li>• Trends for Heart Rate, SpO₂ and BP</li>
                   </ul>
                   <div className="mt-3 text-xs text-gray-500 leading-relaxed">
-                    Insights are based on your personal baseline and are not a medical diagnosis.
+                    For awareness only — not medical advice.
                   </div>
                 </div>
               ) : null}

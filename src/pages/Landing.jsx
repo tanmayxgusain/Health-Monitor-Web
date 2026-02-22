@@ -26,7 +26,7 @@ const Landing = () => {
                 Smart Health Monitor
               </div>
               <div className="text-[11px] sm:text-xs text-gray-500">
-                Calm charts • Personalized baseline
+                AI-powered health insights
               </div>
             </div>
           </div>
@@ -46,22 +46,17 @@ const Landing = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
             {/* Left */}
             <div className="pt-2 sm:pt-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border bg-white/80 text-xs sm:text-sm text-gray-700">
-                <span className="font-semibold text-blue-700">Demo available</span>
-                <span className="text-gray-500 hidden sm:inline">
-                  explore without Google login
-                </span>
-              </div>
+
 
               <h1 className="mt-4 text-3xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-                Understand your health trends,
+                See what your health
                 <br className="hidden sm:block" />
-                <span className="text-blue-700">not just numbers.</span>
+                <span className="text-blue-700">is really telling you.</span>
               </h1>
 
               <p className="mt-3 text-base sm:text-lg text-gray-700 max-w-xl">
-                Sync Google Fit data, view clean charts, and detect unusual patterns
-                using your personal baseline.
+                Transform raw Google Fit data into clear trends and personalized
+                anomaly insights — built around your unique baseline.
               </p>
 
               {/* Buttons (mobile-first full width) */}
@@ -80,7 +75,7 @@ const Landing = () => {
                   }}
                   className="w-full sm:w-auto h-12 px-6 rounded-2xl border bg-white hover:bg-gray-50 text-gray-900 font-semibold shadow-sm transition"
                 >
-                  Try Demo (no login)
+                  Try Demo
                 </button>
               </div>
 
@@ -170,7 +165,7 @@ const Landing = () => {
 
       {/* Footer */}
       <footer className="text-center text-[11px] sm:text-xs text-gray-500 py-6 px-4">
-        © 2026 Smart Health Monitor • Not a medical diagnosis
+        © 2026 Smart Health Monitor
       </footer>
     </div>
   );

@@ -58,7 +58,7 @@ const SleepChart = ({ sleepSessions }) => {
 
   return (
     <div className="bg-white rounded shadow p-4">
-      <h2 className="text-lg font-semibold mb-4">🛌 Sleep (Last 7 Days)</h2>
+      <h2 className="text-lg font-semibold mb-4"> Sleep (Last 7 Days)</h2>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={last7Days}>
           <CartesianGrid strokeDasharray="3 3" />
