@@ -75,6 +75,6 @@ async def startup():
                     print(f" Failed to sync/train for {user.email}: {e}")
 
 
-@app.get("/health")
-def health():
+@app.api_route("/health", methods=["GET", "HEAD"])
+async def health():
     return {"status": "ok"}
