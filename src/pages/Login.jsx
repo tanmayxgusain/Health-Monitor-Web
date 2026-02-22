@@ -1,5 +1,5 @@
 // src/pages/Login.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import LoginButton from "../components/LoginButton";
 
@@ -8,9 +8,16 @@ function Login() {
   const [connecting, setConnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
+  useEffect(() => {
+    const email = localStorage.getItem("user_email");
+    if (email) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
+
   return (
     <div className="min-h-screen bg-white sm:bg-gradient-to-br sm:from-blue-50 sm:via-white sm:to-blue-100 relative">
-      
+
       {connecting ? (
         <div className="fixed inset-0 z-50 bg-white/80 backdrop-blur-sm flex items-center justify-center px-6">
           <div className="w-full max-w-sm rounded-3xl border bg-white shadow-sm p-6 text-center">

@@ -20,13 +20,21 @@ const App = () => {
       <Routes>
 
         {/* Public Routes */}
-        
+
         <Route path="/login" element={<Login />} />
         <Route path="/oauth-success" element={<OAuthSuccess />} />
         <Route path="/logout" element={<Logout />} />
 
         {/* Protected Routes */}
-        <Route path="/" element={<Landing />} />
+        {/* <Route path="/" element={<Landing />} /> */}
+        <Route
+          path="/"
+          element={
+            localStorage.getItem("user_email")
+              ? <Navigate to="/dashboard" replace />
+              : <Landing />
+          }
+        />
 
         {/* <Route path="/" element={
           <ProtectedRoute>
