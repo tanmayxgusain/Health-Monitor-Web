@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Customized,
+  LabelList,
 } from "recharts";
 
 import { formatToIST } from "../utils/time";
@@ -31,9 +32,9 @@ const buildTicks = (minEpoch, maxEpoch, stepHours = 4) => {
 
 
 const formatTickLabel = (epoch) => {
-  
+
   const raw = formatToIST(epoch);
-  
+
   const m = String(raw).match(/(\d{1,2})(?::\d{2})?\s*([APap][Mm])/);
   if (m) return `${Number(m[1])} ${m[2].toUpperCase()}`;
   return raw;
@@ -43,7 +44,7 @@ const formatTickLabel = (epoch) => {
 const toEpoch = (ts) => {
   if (ts == null) return NaN;
   if (typeof ts === "number") return ts;
-  
+
   const asNum = Number(ts);
   if (Number.isFinite(asNum)) return asNum;
   const asDate = Date.parse(ts);
@@ -157,7 +158,7 @@ const LineChartPanel = ({ data, title, color }) => {
       const hasS = normalized.some((d) => Number.isFinite(d.systolic));
       const hasD = normalized.some((d) => Number.isFinite(d.diastolic));
       const hasV = normalized.some((d) => Number.isFinite(d.value));
-      const bp = hasS && hasD; 
+      const bp = hasS && hasD;
 
       // 2) Gap-aware breaks (non-BP only)
       const GAP_THRESHOLD = 60 * MS_MIN;
@@ -183,7 +184,7 @@ const LineChartPanel = ({ data, title, color }) => {
         withGaps = out;
       }
 
-      
+
       const minE = normalized[0].epoch;
       const maxE = normalized[normalized.length - 1].epoch;
       const rangeMs = maxE - minE;
@@ -191,13 +192,13 @@ const LineChartPanel = ({ data, title, color }) => {
       // Step hours by range
       const stepHours =
         rangeMs <= 3 * MS_HOUR ? 1 :
-        rangeMs <= 12 * MS_HOUR ? 2 :
-        rangeMs <= 24 * MS_HOUR ? 4 :
-        12;
+          rangeMs <= 12 * MS_HOUR ? 2 :
+            rangeMs <= 24 * MS_HOUR ? 4 :
+              12;
 
       let tickList = buildTicks(minE, maxE, stepHours);
 
-      
+
       const MAX_TICKS = 5;
       if (tickList.length > MAX_TICKS) {
         const skip = Math.ceil(tickList.length / MAX_TICKS);
@@ -225,7 +226,12 @@ const LineChartPanel = ({ data, title, color }) => {
     );
   }
 
-  const showDots = !isBP && /heart\s*rate|hr\b|spo2|spo₂|oxygen|o2/i.test(title);
+  // const showDots = !isBP && /heart\s*rate|hr\b|spo2|spo₂|oxygen|o2/i.test(title);
+  const isStress = /stress/i.test(title);
+
+  const showDots =
+    isStress ||
+    (!isBP && /heart\s*rate|hr\b|spo2|spo₂|oxygen|o2/i.test(title));
 
   return (
     <div className="bg-white rounded-3xl border shadow-sm p-4 sm:p-5 w-full">
@@ -241,7 +247,7 @@ const LineChartPanel = ({ data, title, color }) => {
       <div className="mt-3">
         <ResponsiveContainer width="100%" height={220}>
           <LineChart data={chartData} margin={{ top: 10, right: 8, bottom: 0, left: 0 }}>
-            
+
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
             <XAxis
@@ -264,7 +270,7 @@ const LineChartPanel = ({ data, title, color }) => {
               width={36}
             />
 
-            
+
             {isBP ? (
               <Tooltip
                 isAnimationActive={false}
@@ -303,8 +309,8 @@ const LineChartPanel = ({ data, title, color }) => {
                   const v = payload?.[0]?.value;
                   const unitGuess =
                     /spo2|spo₂|oxygen|o2/i.test(title) ? "%" :
-                    /heart\s*rate|hr\b/i.test(title) ? "bpm" :
-                    "";
+                      /heart\s*rate|hr\b/i.test(title) ? "bpm" :
+                        "";
 
                   return (
                     <TooltipShell
@@ -322,10 +328,10 @@ const LineChartPanel = ({ data, title, color }) => {
               />
             )}
 
-            
+
             {isBP && <Customized component={BPVerticalConnectors} />}
 
-            
+
             {isBP && hasSystolic && (
               <Line
                 type="monotone"
@@ -352,7 +358,7 @@ const LineChartPanel = ({ data, title, color }) => {
               />
             )}
 
-            
+
             {!isBP && hasValue && (
               <Line
                 type="monotone"
@@ -364,7 +370,15 @@ const LineChartPanel = ({ data, title, color }) => {
                 activeDot={{ r: 6 }}
                 connectNulls={false}
                 isAnimationActive={false}
-              />
+              >
+                {isStress ? (
+                  <LabelList
+                    dataKey="value"
+                    position="top"
+                    formatter={(v) => (v == null ? "" : v)}
+                  />
+                ) : null}
+              </Line>
             )}
           </LineChart>
         </ResponsiveContainer>
