@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -114,7 +114,10 @@ const Dashboard = () => {
     localStorage.getItem("last_synced_at")
   );
 
-  const periodLabel = getPeriodLabel(period, customStart);
+  const periodLabel = useMemo(
+    () => getPeriodLabel(period, customStart),
+    [period, customStart]
+  );
 
 
   const [history, setHistory] = useState({
