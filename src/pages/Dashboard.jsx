@@ -190,8 +190,9 @@ const Dashboard = () => {
 
   // ---------- fetch data ----------
   useEffect(() => {
+    const periodLabel = getPeriodLabel(period, customStart);
     const fetchHealthData = async () => {
-      const periodLabel = getPeriodLabel(period, customStart);
+      
       if (demo) {
         setSleepSessions(demoSleepSessions);
 
