@@ -49,14 +49,12 @@ const Landing = () => {
 
 
               <h1 className="mt-4 text-3xl sm:text-5xl font-extrabold text-gray-900 leading-tight">
-                See what your health
-                <br className="hidden sm:block" />
+                See what your health <br className="hidden sm:block" />
                 <span className="text-blue-700">is really telling you.</span>
               </h1>
 
               <p className="mt-3 text-base sm:text-lg text-gray-700 max-w-xl">
-                Transform raw Google Fit data into clear trends and personalized
-                anomaly insights — built around your unique baseline.
+                Turn your Google Fit data into clear trends and AI insights — personalized to your baseline.
               </p>
 
               {/* Buttons (mobile-first full width) */}
@@ -80,9 +78,8 @@ const Landing = () => {
               </div>
 
               <div className="mt-5 text-sm text-gray-600 leading-relaxed">
-                <span className="font-semibold text-gray-900">Privacy-first.</span>{" "}
-                Insights are based on your baseline and are{" "}
-                <span className="font-semibold">not a medical diagnosis</span>.
+                <span className="font-semibold text-gray-900">Private and secure.</span>{" "}
+                Insights are for personal awareness only — not medical advice.
               </div>
 
               {/* Mobile-friendly feature rows */}

@@ -13,6 +13,16 @@ import { isDemoMode, exitDemoMode } from "../demo/demoMode";
 import { demoHistory, demoSleepSessions } from "../demo/demoData";
 
 
+const getPeriodLabel = (period, customStart) => {
+  if (period === "Today") return "Today";
+  if (period === "Yesterday") return "Yesterday";
+  if (period === "Custom" && customStart) {
+    const d = new Date(customStart + "T00:00:00");
+    return `On ${d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}`;
+  }
+  return "Selected day";
+};
+
 const formatDuration = (hours) => {
   if (!hours || hours === "--") return "--";
   return `${parseFloat(hours).toFixed(1)} hrs`;
@@ -104,6 +114,8 @@ const Dashboard = () => {
     localStorage.getItem("last_synced_at")
   );
 
+  const periodLabel = getPeriodLabel(period, customStart);
+
 
   const [history, setHistory] = useState({
     heart_rate: [],
@@ -160,9 +172,6 @@ const Dashboard = () => {
   };
 
   // ---------- auth redirect ----------
-  // useEffect(() => {
-  //   if (!email) navigate("/login");
-  // }, [email, navigate]);
 
   useEffect(() => {
     if (!demo && !email) navigate("/login");
@@ -199,10 +208,10 @@ const Dashboard = () => {
         setAverageMetrics({
           heart_rate: { primary: 76, unit: "bpm", subtitle: "Low 70 • High 88" },
           spo2: { primary: 96, unit: "%", subtitle: "Avg 97%" },
-          blood_pressure: { primary: "122/80", unit: "mmHg", subtitle: "Today avg 124/82" },
-          steps: { primary: 6400, unit: "", subtitle: "Today total" },
-          distance: { primary: "4.30", unit: "km", subtitle: "Today total" },
-          calories: { primary: 520, unit: "kcal", subtitle: "Today total" },
+          blood_pressure: { primary: "122/80", unit: "mmHg", subtitle: `${periodLabel} avg 124/82` },
+          steps: { primary: 6400, unit: "", subtitle: `${periodLabel} total` },
+          distance: { primary: "4.30", unit: "km", subtitle: `${periodLabel} total` },
+          calories: { primary: 520, unit: "kcal", subtitle: `${periodLabel} total` },
           sleep: { primary: "7.0 hrs", unit: "", subtitle: "Last night" },
           stress: { primary: 3, unit: "level", subtitle: "Peak 4" },
         });
@@ -300,7 +309,7 @@ const Dashboard = () => {
             ? {
               primary: getLatestBP(data.blood_pressure),
               unit: "mmHg",
-              subtitle: `Today avg ${getAvgBP(data.blood_pressure)}`,
+              subtitle: `${periodLabel} avg ${getAvgBP(data.blood_pressure)}`,
             }
             : { primary: "--", unit: "mmHg", subtitle: "" },
 
@@ -313,14 +322,14 @@ const Dashboard = () => {
             : { primary: "--", unit: "level", subtitle: "" },
 
           steps: data.steps?.length
-            ? { primary: getSumInt(data.steps), unit: "", subtitle: "Today total" }
+            ? { primary: getSumInt(data.steps), unit: "", subtitle: `${periodLabel} total` }
             : { primary: "--", unit: "", subtitle: "" },
 
           calories: data.calories?.length
             ? {
               primary: getSumInt(data.calories),
               unit: "kcal",
-              subtitle: "Today total",
+              subtitle: `${periodLabel} total`,
             }
             : { primary: "--", unit: "kcal", subtitle: "" },
 
@@ -328,7 +337,7 @@ const Dashboard = () => {
             ? {
               primary: `${getSumFloat(data.distance).toFixed(2)}`,
               unit: "km",
-              subtitle: "Today total",
+              subtitle: `${periodLabel} total`,
             }
             : { primary: "--", unit: "km", subtitle: "" },
 
@@ -348,7 +357,7 @@ const Dashboard = () => {
               ? {
                 primary: formatDuration(getSumFloat(filteredSleepSessions)),
                 unit: "",
-                subtitle: "Last night",
+                subtitle: period === "Today" ? "Last night" : periodLabel,
               }
               : { primary: "--", unit: "", subtitle: "" };
           })(),
@@ -357,19 +366,11 @@ const Dashboard = () => {
         console.error("History DB fetch error:", err);
       }
 
-      // try {
-      //   // const actRes = await axios.get("http://localhost:8000/activity-logs", {
-      //   const actRes = await axios.get("https://health-monitor-djcv.onrender.com/activity-logs", {
-      //     params: { user_email: email, days: 7 },
-      //   });
-      //   setActivityLogs(actRes.data || []);
-      // } catch (err) {
-      //   console.error("Failed to fetch activity logs:", err);
-      // }
+
     };
 
     fetchHealthData();
-    // }, [email, period, customStart]);
+
   }, [demo, email, period, customStart]);
 
   // ---------- user name ----------
