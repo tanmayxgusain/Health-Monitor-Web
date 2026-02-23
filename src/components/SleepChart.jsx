@@ -18,7 +18,7 @@ const CustomTooltip = ({ active, payload }) => {
     return (
       <div className="bg-white p-2 shadow rounded text-sm">
         <p className="font-semibold">{format(parseISO(session.date), "EEE, d MMM")}</p>
-        <p>🛏 {session.hours?.toFixed(1) || "0"} hrs</p>
+        <p> {session.hours?.toFixed(1) || "0"} hrs</p>
       </div>
     );
   }
